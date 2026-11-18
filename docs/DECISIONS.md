@@ -49,3 +49,16 @@ Every assumption and ruling made while building this project. Newest phases appe
 | P1-10 | Seed passwords are inserted as plain strings and hashed by the model's `hashed` cast. | Exercises the same path used by the application and proves bcrypt is applied. | None. |
 | P1-11 | `order_number_sequences` is a per-year counter; seeding and P6 both increment it under a transaction/lock. | FR-ORDER-9 requires a race-safe sequence. | Sequence gaps after failed transactions are acceptable (numbers need uniqueness, not density). |
 | P1-12 | Seed orders do **not** decrement product stock. | The seed represents historical data, and stock values are curated to exercise all stock states. | Stock numbers are illustrative, not a ledger of seeded sales. Documented for reviewers. |
+
+## P2 — Authentication
+
+| # | Decision | Why | Cost if wrong |
+|---|----------|-----|---------------|
+| P2-1 | Login throttling is an explicit counter in `AuthService` keyed by `strtolower(email)|ip`, checked before credential validation, not route middleware. | FR-AUTH-5 counts *failed* attempts per email + IP; a generic route limiter would also count successes and cannot clear on success. | A distributed deployment needs a shared cache (the database cache is shared here). |
+| P2-2 | Throttled responses are `429` with `Retry-After` and the standard envelope. | FR-AUTH-5 requires 429; the envelope keeps clients uniform. | None. |
+| P2-3 | The password reset notification is queued (`ShouldQueue`), mirroring D9, and its link points at `FRONTEND_URL/reset-password?token=…&email=…`. | Mail must not block the request, and the frontend owns the reset screen (no Blade). | Local reviewers must run `queue:work` (or `queue:listen`) and Mailpit; documented in README. |
+| P2-4 | `Password::uncompromised()` is enabled in every environment except tests (`PASSWORD_CHECK_PWNED=false` in `phpunit.xml`). The pwned path is still tested by one test that enables the rule and fakes the HaveIBeenPwned HTTP response. | The rule calls a public API; keeping it on in every test makes the suite network-dependent. | Tests do not exercise the live API; the faked test proves the rule is wired in. |
+| P2-5 | Email verification (FR-AUTH-4) and staff TOTP 2FA (FR-AUTH-9) are **bonus** items and are deferred until all P0–P14 core work is complete. | They add flows (signed URLs, QR enrolment, recovery codes) that are not part of the core commerce journey. | The bonus points for those two items are not claimed unless time allows in P14. |
+| P2-6 | Inactive users get the same generic `401` as a wrong password, and staff tokens are ability-scoped at the route level. | FR-AUTH-6 forbids enumeration; D3 requires separated surfaces. | Operators cannot distinguish a disabled account from bad credentials in the response — intentional; admins see `is_active` in the admin UI. |
+| P2-7 | Sanctum caches the resolved guard user for the lifetime of a test; tests call `forgetAuthGuards()` after switching tokens. | Without it, sequential requests with different bearer tokens within one Pest test reuse the first user. | Test-only helper; real HTTP requests are unaffected. |
+

@@ -75,21 +75,21 @@ DoD: `php artisan migrate:fresh --seed` succeeds from scratch.
 
 ## P2: Authentication
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Customer register, login, logout, me
-- [ ] Staff login, logout, me on a separate endpoint with ability checks
-- [ ] Login throttle: 5 failed attempts, HTTP 429
-- [ ] Generic invalid-credentials error
-- [ ] Strong password policy rules
-- [ ] Forgot / reset password flow with Mailpit, token expiry, single use
-- [ ] Revoke tokens on logout and on password change
-- [ ] Email verification (bonus)
-- [ ] TOTP 2FA for staff (bonus)
-- [ ] Tests: generic error, throttle, customer token rejected on admin routes and reverse, password reset
+- [x] Customer register, login, logout, me
+- [x] Staff login, logout, me on a separate endpoint with ability checks
+- [x] Login throttle: 5 failed attempts, HTTP 429
+- [x] Generic invalid-credentials error
+- [x] Strong password policy rules
+- [x] Forgot / reset password flow with Mailpit, token expiry, single use
+- [x] Revoke tokens on logout and on password change
+- [ ] Email verification (bonus) — deferred, see DECISIONS P2-5
+- [ ] TOTP 2FA for staff (bonus) — deferred, see DECISIONS P2-5
+- [x] Tests: generic error, throttle, customer token rejected on admin routes and reverse, password reset
 
-DoD: All auth tests pass.
+DoD: All auth tests pass. — 36 tests / 233 assertions green; reset mail verified in Mailpit.
 
 ---
 

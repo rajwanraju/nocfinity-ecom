@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P1.
+Last updated: P2.
 
 ## Phase status
 
@@ -8,7 +8,7 @@ Last updated: P1.
 |-------|-------|--------|--------------|
 | P0 | Project setup and tooling | ✅ Done | see `git log --oneline` |
 | P1 | Database, models, seeders | ✅ Done | see `git log --oneline` |
-| P2 | Authentication | ⬜ Not started | — |
+| P2 | Authentication | ✅ Done | see `git log --oneline` |
 | P3 | RBAC | ⬜ Not started | — |
 | P4 | Catalog API | ⬜ Not started | — |
 | P5 | Cart and coupons | ⬜ Not started | — |
@@ -28,21 +28,21 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 
 | ID | Requirement | Implementation | Test / evidence | Status |
 |----|-------------|----------------|-----------------|--------|
-| FR-AUTH-1 | Customer register/login/logout/me | — | — | ⬜ |
-| FR-AUTH-2 | Separate staff auth, token abilities | — | — | ⬜ |
-| FR-AUTH-3 | Forgot/reset password, 60 min, single use | — | — | ⬜ |
-| FR-AUTH-4 | Email verification (bonus) | — | — | ⬜ |
-| FR-AUTH-5 | Login throttle 5 attempts + 429 + Retry-After | — | — | ⬜ |
-| FR-AUTH-6 | Generic login error, no email enumeration | — | — | ⬜ |
-| FR-AUTH-7 | Password policy (10+, mixed, number, symbol, pwned) | — | — | ⬜ |
-| FR-AUTH-8 | Token revocation + expiry | — | — | ⬜ |
-| FR-AUTH-9 | TOTP 2FA for staff (bonus) | — | — | ⬜ |
+| FR-AUTH-1 | Customer register/login/logout/me | `backend/app/Http/Controllers/Api/V1/Auth/CustomerAuthController.php`, `AuthService` | `tests/Feature/Auth/CustomerAuthTest.php` | ✅ |
+| FR-AUTH-2 | Separate staff auth, token abilities | `StaffAuthController`, `abilities:customer` / `abilities:staff` in `routes/api.php` | `tests/Feature/Auth/StaffAuthTest.php` | ✅ |
+| FR-AUTH-3 | Forgot/reset password, 60 min, single use | `PasswordResetController`, `PasswordResetService`, queued `ResetPasswordNotification` | `tests/Feature/Auth/PasswordResetTest.php` + Mailpit check | ✅ |
+| FR-AUTH-4 | Email verification (bonus) | deferred — DECISIONS P2-5 | — | ⬜ |
+| FR-AUTH-5 | Login throttle 5 attempts + 429 + Retry-After | `AuthService::guardAgainstThrottle()` | `tests/Feature/Auth/LoginThrottleTest.php` | ✅ |
+| FR-AUTH-6 | Generic login error, no email enumeration | `InvalidCredentialsException`; same message for unknown/wrong/inactive | `CustomerAuthTest` + `StaffAuthTest` | ✅ |
+| FR-AUTH-7 | Password policy (10+, mixed, number, symbol, pwned) | `app/Support/PasswordRules.php` | `CustomerAuthTest` weak-password dataset | ✅ |
+| FR-AUTH-8 | Token revocation + expiry | logout revokes current; password change/reset revokes all (except current) | `CustomerAuthTest`, `PasswordResetTest` | ✅ |
+| FR-AUTH-9 | TOTP 2FA for staff (bonus) | deferred — DECISIONS P2-5 | — | ⬜ |
 | FR-RBAC-1 | Five roles + custom | `database/seeders/RolePermissionSeeder.php` | `DatabaseSeederTest` | 🟡 |
 | FR-RBAC-2 | Granular permission list | `RolePermissionSeeder::PERMISSIONS` | `DatabaseSeederTest` | 🟡 |
 | FR-RBAC-3 | Roles↔permissions, staff↔roles | Spatie tables + `UserSeeder` | `DatabaseSeederTest` | 🟡 |
 | FR-RBAC-4 | Super Admin immutability, last one protected | — | — | ⬜ |
 | FR-RBAC-5 | Permission middleware on every admin route | — | — | ⬜ |
-| FR-RBAC-6 | `/admin/auth/me` effective permissions | — | — | ⬜ |
+| FR-RBAC-6 | `/admin/auth/me` effective permissions | `StaffAuthController@me`, `StaffResource` | `tests/Feature/Auth/StaffAuthTest.php` | 🟡 |
 | FR-RBAC-7 | Permission matrix API/UI | — | — | ⬜ |
 | FR-RBAC-8 | Staff management | — | — | ⬜ |
 | FR-CAT-1 | Category tree, slug, delete guards | — | — | ⬜ |
@@ -102,10 +102,10 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | SEC-4 | XSS sanitization | — | — | ⬜ |
 | SEC-5 | IDOR policies | — | — | ⬜ |
 | SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
-| SEC-7 | No sensitive fields in responses | — | — | ⬜ |
+| SEC-7 | No sensitive fields in responses | `UserResource` / `StaffResource` explicit field lists | Auth tests assert no password/token leakage | 🟡 |
 | SEC-8 | CORS allowlist + security headers | `backend/config/cors.php`, `SecurityHeaders.php`, `frontend/next.config.ts` | `tests/Feature/HealthTest.php` | 🟡 |
 | SEC-9 | CSRF posture (SameSite + origin checks) | — | — | ⬜ |
-| SEC-10 | Rate limits | `backend/app/Providers/AppServiceProvider.php` | — | 🟡 |
+| SEC-10 | Rate limits | named limiters in `AppServiceProvider`; login throttle in `AuthService` | `LoginThrottleTest` (429 + Retry-After) | 🟡 |
 | SEC-11 | Secure uploads/secrets | `.env.example`, `.gitignore` | review | 🟡 |
 | SEC-12 | Stripe signature verification | — | — | ⬜ |
 | SEC-13 | Dependency audits | — | — | ⬜ |
@@ -118,7 +118,7 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | OPS-1 | Thin controllers, services, Pint/ESLint/Prettier/TS strict | Pint, ESLint, Prettier, `tsconfig` strict configured | `pint --test`, `eslint .`, `tsc --noEmit` all clean | 🟡 |
 | OPS-2 | Required feature tests | — | — | ⬜ |
 | OPS-3 | Logging + health check | `HealthController`, Laravel log channels | `tests/Feature/HealthTest.php` | ✅ |
-| OPS-4 | Queue + scheduler docs | — | — | ⬜ |
+| OPS-4 | Queue + scheduler docs | `database` queue; queued reset mail verified via Mailpit + `queue:work` | Mailpit message intercepted | 🟡 |
 | OPS-5 | Docker Compose (bonus) | — | — | ⬜ |
 | OPS-6 | CI (bonus) | — | — | ⬜ |
 | OPS-7 | Conventional commit history | this repo | `git log` | 🟡 |
@@ -170,3 +170,25 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - Orders/coupons business rules (usage increments, refunds) are implemented in P5/P6, not by seeders.
 
 **Next:** P2 — authentication, throttling, password reset.
+
+## P2 report
+
+**Done**
+
+- Customer auth: `POST /auth/register`, `/auth/login`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-password` with `customer`-ability tokens.
+- Staff auth on a separate `/admin/auth/*` surface with `staff`-ability tokens; customer tokens are rejected on staff routes and vice versa. `GET /admin/auth/me` returns the effective role/permission set (builds on P3).
+- Login throttle: 5 failed attempts per lowercased email + IP → `429` with `Retry-After`; successful login clears the counter.
+- Generic credential error (identical message and status for unknown email, wrong password and inactive account) so accounts cannot be enumerated.
+- Password policy 10+ chars, mixed case, number, symbol, and Laravel's `uncompromised()` check (disabled only in tests via `PASSWORD_CHECK_PWNED=false`).
+- Forgot/reset password: queued notification, 60-minute single-use token, all tokens revoked on reset; the link targets the Next.js `/reset-password` page.
+- Tokens revoked on logout; password change revokes every other token but keeps the current session.
+- `UserResource` / `StaffResource` return explicit fields — no password hash or token leakage.
+- 36 tests / 233 assertions green; Pint clean. Reset mail verified end-to-end in Mailpit through the database queue.
+
+**Not done / risks**
+
+- Email verification (FR-AUTH-4) and staff TOTP 2FA (FR-AUTH-9) are bonus items and are deferred (DECISIONS P2-5).
+- The pwned-password check is disabled in the test suite for determinism; production defaults to enabled.
+- BFF cookie transport, CSRF origin checks and login UI are frontend work scheduled for P8–P10.
+
+**Next:** P3 — RBAC: gates, permission middleware, roles/permissions API, staff CRUD, Super Admin immutability.
