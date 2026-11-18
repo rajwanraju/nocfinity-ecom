@@ -1,13 +1,13 @@
 # Progress
 
-Last updated: P0.
+Last updated: P1.
 
 ## Phase status
 
 | Phase | Title | Status | Commit range |
 |-------|-------|--------|--------------|
 | P0 | Project setup and tooling | ✅ Done | see `git log --oneline` |
-| P1 | Database, models, seeders | ⬜ Not started | — |
+| P1 | Database, models, seeders | ✅ Done | see `git log --oneline` |
 | P2 | Authentication | ⬜ Not started | — |
 | P3 | RBAC | ⬜ Not started | — |
 | P4 | Catalog API | ⬜ Not started | — |
@@ -37,9 +37,9 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-AUTH-7 | Password policy (10+, mixed, number, symbol, pwned) | — | — | ⬜ |
 | FR-AUTH-8 | Token revocation + expiry | — | — | ⬜ |
 | FR-AUTH-9 | TOTP 2FA for staff (bonus) | — | — | ⬜ |
-| FR-RBAC-1 | Five roles + custom | — | — | ⬜ |
-| FR-RBAC-2 | Granular permission list | — | — | ⬜ |
-| FR-RBAC-3 | Roles↔permissions, staff↔roles | — | — | ⬜ |
+| FR-RBAC-1 | Five roles + custom | `database/seeders/RolePermissionSeeder.php` | `DatabaseSeederTest` | 🟡 |
+| FR-RBAC-2 | Granular permission list | `RolePermissionSeeder::PERMISSIONS` | `DatabaseSeederTest` | 🟡 |
+| FR-RBAC-3 | Roles↔permissions, staff↔roles | Spatie tables + `UserSeeder` | `DatabaseSeederTest` | 🟡 |
 | FR-RBAC-4 | Super Admin immutability, last one protected | — | — | ⬜ |
 | FR-RBAC-5 | Permission middleware on every admin route | — | — | ⬜ |
 | FR-RBAC-6 | `/admin/auth/me` effective permissions | — | — | ⬜ |
@@ -97,11 +97,11 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-API-5 | Resources, FormRequests, central handler | `backend/app/Exceptions/ApiExceptionHandler.php` | Pint + tests | 🟡 |
 | FR-API-6 | API documentation | — | — | ⬜ |
 | SEC-1 | Server-side pricing | — | — | ⬜ |
-| SEC-2 | bcrypt cost 12 | `backend/.env.example` (`BCRYPT_ROUNDS=12`) | — | 🟡 |
-| SEC-3 | No unsafe SQL | — | — | ⬜ |
+| SEC-2 | bcrypt cost 12 | `backend/.env.example` (`BCRYPT_ROUNDS=12`), `User` hashed cast | `DatabaseSeederTest` asserts hash cost 12 | ✅ |
+| SEC-3 | No unsafe SQL | Eloquent/query builder throughout; only parameterless `SELECT 1` health probe | Pint + code review | ✅ |
 | SEC-4 | XSS sanitization | — | — | ⬜ |
 | SEC-5 | IDOR policies | — | — | ⬜ |
-| SEC-6 | Mass assignment protection | — | — | ⬜ |
+| SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
 | SEC-7 | No sensitive fields in responses | — | — | ⬜ |
 | SEC-8 | CORS allowlist + security headers | `backend/config/cors.php`, `SecurityHeaders.php`, `frontend/next.config.ts` | `tests/Feature/HealthTest.php` | 🟡 |
 | SEC-9 | CSRF posture (SameSite + origin checks) | — | — | ⬜ |
@@ -110,14 +110,14 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | SEC-12 | Stripe signature verification | — | — | ⬜ |
 | SEC-13 | Dependency audits | — | — | ⬜ |
 | SEC-14 | Validation both sides | — | — | ⬜ |
-| NFR-DB-1 | FKs and unique constraints | — | — | ⬜ |
-| NFR-DB-2 | Indexes and soft deletes | — | — | ⬜ |
-| NFR-DB-3 | Eager loading | — | — | ⬜ |
-| NFR-DB-4 | `migrate:fresh --seed` | — | — | ⬜ |
-| NFR-SEED | Required seed data | — | — | ⬜ |
+| NFR-DB-1 | FKs and unique constraints | `database/migrations/*` | `SchemaTest` + `migrate:fresh --seed` | ✅ |
+| NFR-DB-2 | Indexes and soft deletes | `database/migrations/*` (status/created_at/category/search indexes, soft deletes) | `SchemaTest` | ✅ |
+| NFR-DB-3 | Eager loading | Relations defined on all models; controllers eager-load from P4 | `DatabaseSeederTest` | 🟡 |
+| NFR-DB-4 | `migrate:fresh --seed` | `DatabaseSeeder` | command run clean on MySQL 8.4 | ✅ |
+| NFR-SEED | Required seed data | `database/seeders/*`, local images in `database/seeders/assets/products` | `DatabaseSeederTest` | ✅ |
 | OPS-1 | Thin controllers, services, Pint/ESLint/Prettier/TS strict | Pint, ESLint, Prettier, `tsconfig` strict configured | `pint --test`, `eslint .`, `tsc --noEmit` all clean | 🟡 |
 | OPS-2 | Required feature tests | — | — | ⬜ |
-| OPS-3 | Logging + health check | `HealthController` | `tests/Feature/HealthTest.php` | 🟡 |
+| OPS-3 | Logging + health check | `HealthController`, Laravel log channels | `tests/Feature/HealthTest.php` | ✅ |
 | OPS-4 | Queue + scheduler docs | — | — | ⬜ |
 | OPS-5 | Docker Compose (bonus) | — | — | ⬜ |
 | OPS-6 | CI (bonus) | — | — | ⬜ |
@@ -148,3 +148,25 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - No Docker yet (P14 bonus).
 
 **Next:** P1 — database, models, seeders.
+
+## P1 report
+
+**Done**
+
+- Full MySQL schema: users (+type/is_active/phone/last_login), Spatie tables, categories, products, product_images, carts, cart_items, coupons, coupon_usages, orders, order_items, order_status_histories, payments, stripe_webhook_events, order_number_sequences, settings, activity_logs.
+- Foreign keys, unique constraints, indexes, soft deletes (categories/products/coupons).
+- PHP backed enums for user type, order status (with the binding transition table), coupon type, payment status, setting type.
+- Models with `$fillable`, casts and relationships; privileged user fields excluded from mass assignment.
+- `SettingService` with typed, cached settings (shipping fee 999¢, free threshold 10000¢, tax 0).
+- Seeders: 13 permissions, 5 roles, Super Admin + 4 staff, 5 customers, 3-level category tree (13 nodes), 26 products, 30 local images, 3 coupons (incl. expired), 6 orders covering every status + payments/history/coupon usage.
+- ER diagram (`docs/ERD.md`).
+- 10 tests passing (76 assertions), including bcrypt cost 12 and mass-assignment rejection.
+- `php artisan migrate:fresh --seed` verified on MySQL 8.4; `storage:link` verified.
+
+**Not done / risks**
+
+- Seed orders do not decrement stock by design (P1-12).
+- Scope/visibility filtering of inactive products and trashed rows is enforced in P4.
+- Orders/coupons business rules (usage increments, refunds) are implemented in P5/P6, not by seeders.
+
+**Next:** P2 — authentication, throttling, password reset.

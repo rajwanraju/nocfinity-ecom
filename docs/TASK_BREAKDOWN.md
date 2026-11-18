@@ -16,7 +16,7 @@ Status legend: ⬜ Not started | 🟡 In progress | ✅ Done | ⛔ Blocked
 | Phase | Title | Requirements covered | Status |
 |-------|-------|----------------------|--------|
 | P0 | Project setup and tooling | OPS-1, OPS-7 | ✅ |
-| P1 | Database, models, seeders | NFR-DB, NFR-SEED | ⬜ |
+| P1 | Database, models, seeders | NFR-DB, NFR-SEED | ✅ |
 | P2 | Authentication | FR-AUTH, SEC-2, SEC-6, SEC-10 | ⬜ |
 | P3 | RBAC | FR-RBAC | ⬜ |
 | P4 | Catalog API | FR-CAT, SEC-4 | ⬜ |
@@ -54,20 +54,20 @@ DoD: Both apps boot locally. Health endpoint returns 200. Linters run clean.
 
 ## P1: Database, Models, Seeders
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Migrations: users (+ `type`, `is_active`, `phone`), password_reset_tokens, personal_access_tokens
-- [ ] Migrations: Spatie roles and permissions tables
-- [ ] Migrations: categories, products, product_images
-- [ ] Migrations: carts, cart_items
-- [ ] Migrations: coupons, coupon_usages
-- [ ] Migrations: orders, order_items, order_status_histories, payments
-- [ ] Migrations: stripe_webhook_events, order_number_sequences, settings, activity_logs (bonus)
-- [ ] Add foreign keys, unique constraints, indexes, soft deletes
-- [ ] Models with relationships, casts, `$fillable`
-- [ ] Seeders: permissions, roles, Super Admin, category tree, 20+ products with local images, 3 coupons, customers, orders in all statuses
-- [ ] ER diagram added to docs
+- [x] Migrations: users (+ `type`, `is_active`, `phone`), password_reset_tokens, personal_access_tokens
+- [x] Migrations: Spatie roles and permissions tables
+- [x] Migrations: categories, products, product_images
+- [x] Migrations: carts, cart_items
+- [x] Migrations: coupons, coupon_usages
+- [x] Migrations: orders, order_items, order_status_histories, payments
+- [x] Migrations: stripe_webhook_events, order_number_sequences, settings, activity_logs (bonus)
+- [x] Add foreign keys, unique constraints, indexes, soft deletes
+- [x] Models with relationships, casts, `$fillable`
+- [x] Seeders: permissions, roles, Super Admin, category tree, 20+ products with local images, 3 coupons, customers, orders in all statuses
+- [x] ER diagram added to docs
 
 DoD: `php artisan migrate:fresh --seed` succeeds from scratch.
 
