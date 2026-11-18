@@ -11,10 +11,20 @@ use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CatalogController;
+use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class)->name('api.health');
+
+/*
+|--------------------------------------------------------------------------
+| Stripe webhook (P6): signature-verified, idempotent, no auth
+|--------------------------------------------------------------------------
+*/
+Route::post('webhooks/stripe', [WebhookController::class, 'handle'])->name('api.webhooks.stripe');
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +53,22 @@ Route::prefix('cart')->name('api.cart.')->group(function (): void {
         Route::post('coupon', [CartController::class, 'applyCoupon'])->name('coupon.apply');
         Route::delete('coupon', [CartController::class, 'removeCoupon'])->name('coupon.remove');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Checkout (P6): authenticated customers only
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:sanctum', 'abilities:customer'])->group(function (): void {
+    Route::post('checkout', [CheckoutController::class, 'store'])
+        ->middleware('throttle:checkout')
+        ->name('api.checkout');
+
+    Route::get('orders', [OrderController::class, 'index'])->name('api.orders.index');
+    Route::get('orders/{order}', [OrderController::class, 'show'])
+        ->whereNumber('order')
+        ->name('api.orders.show');
 });
 
 /*

@@ -12,6 +12,7 @@ class Payment extends Model
         'order_id',
         'provider',
         'provider_payment_intent_id',
+        'client_secret',
         'provider_charge_id',
         'provider_refund_id',
         'amount',
@@ -35,6 +36,13 @@ class Payment extends Model
             'refunded_at' => 'datetime',
         ];
     }
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = [
+        'client_secret',
+    ];
 
     public function order(): BelongsTo
     {

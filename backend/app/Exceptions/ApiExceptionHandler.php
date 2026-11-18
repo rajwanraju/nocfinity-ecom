@@ -51,6 +51,16 @@ final class ApiExceptionHandler
                     ['code' => [$e->getMessage()]],
                     422,
                 ),
+                $e instanceof StripeWebhookSignatureException => ApiResponse::error(
+                    'Invalid webhook signature.',
+                    [],
+                    400,
+                ),
+                $e instanceof InvalidOrderTransitionException => ApiResponse::error(
+                    $e->getMessage(),
+                    [],
+                    409,
+                ),
                 $e instanceof LoginThrottledException => ApiResponse::error(
                     'Too many login attempts. Please try again later.',
                     [],
