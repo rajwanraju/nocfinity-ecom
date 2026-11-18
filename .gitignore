@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment — never commit real secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+backend/public/build
+backend/public/hot
+backend/public/storage
+backend/storage/*.key
+backend/storage/pail
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/coverage/
+
+# Logs / caches
+*.log
+.phpunit.result.cache
+.phpunit.cache/
+frontend/*.tsbuildinfo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+*.pem
+
+# Superpowers scratch
+.superpowers/

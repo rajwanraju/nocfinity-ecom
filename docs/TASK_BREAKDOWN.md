@@ -1,0 +1,331 @@
+# Task Breakdown: E-commerce Application
+
+How to use this file:
+
+- Work phase by phase. Finish a phase completely before starting the next.
+- Update the Status column and tick the checkboxes as work progresses.
+- A phase is DONE only when every step is checked and its Definition of Done (DoD) is verified.
+- Requirement IDs refer to `REQUIREMENTS.md`.
+
+Status legend: ⬜ Not started | 🟡 In progress | ✅ Done | ⛔ Blocked
+
+---
+
+## Phase Overview
+
+| Phase | Title | Requirements covered | Status |
+|-------|-------|----------------------|--------|
+| P0 | Project setup and tooling | OPS-1, OPS-7 | ✅ |
+| P1 | Database, models, seeders | NFR-DB, NFR-SEED | ⬜ |
+| P2 | Authentication | FR-AUTH, SEC-2, SEC-6, SEC-10 | ⬜ |
+| P3 | RBAC | FR-RBAC | ⬜ |
+| P4 | Catalog API | FR-CAT, SEC-4 | ⬜ |
+| P5 | Cart and coupons | FR-CART, FR-COUPON, SEC-1 | ⬜ |
+| P6 | Checkout, payment, orders | FR-ORDER, SEC-5, SEC-12 | ⬜ |
+| P7 | Admin API | FR-ADMIN (API side) | ⬜ |
+| P8 | Frontend foundation | FR-UI-3, SEC-8, SEC-9 | ⬜ |
+| P9 | Storefront pages | FR-UI-1, FR-UI-2, FR-UI-4..6 | ⬜ |
+| P10 | Checkout UI and account pages | FR-ORDER (UI), FR-CART-5 | ⬜ |
+| P11 | Admin panel UI | FR-ADMIN, FR-RBAC-6, FR-RBAC-7 | ⬜ |
+| P12 | Security hardening | SEC-1..14 | ⬜ |
+| P13 | Testing and bug fixing | OPS-2 | ⬜ |
+| P14 | Docs, Docker, final QA | OPS-5, OPS-6, OPS-DOC | ⬜ |
+
+---
+
+## P0: Project Setup and Tooling
+
+Status: ✅
+
+Steps:
+- [x] Create `backend/` (Laravel 12) and `frontend/` (Next.js, TypeScript, App Router)
+- [x] Install backend packages: Sanctum, Spatie Laravel Permission, Stripe PHP SDK, Pest, Laravel Pint
+- [x] Install frontend packages: Tailwind, shadcn/ui, react-hook-form, zod, a chart library, Stripe React libraries
+- [x] Create `.env.example` for both apps, configure `.gitignore`
+- [x] Configure MySQL connection, Mailpit mail settings, CORS allowlist
+- [x] Configure Pint, ESLint, Prettier, TypeScript strict
+- [x] Add a health check endpoint
+- [x] Create `PROGRESS.md` and `docs/DECISIONS.md`
+- [x] First commit
+
+DoD: Both apps boot locally. Health endpoint returns 200. Linters run clean.
+
+---
+
+## P1: Database, Models, Seeders
+
+Status: ⬜
+
+Steps:
+- [ ] Migrations: users (+ `type`, `is_active`, `phone`), password_reset_tokens, personal_access_tokens
+- [ ] Migrations: Spatie roles and permissions tables
+- [ ] Migrations: categories, products, product_images
+- [ ] Migrations: carts, cart_items
+- [ ] Migrations: coupons, coupon_usages
+- [ ] Migrations: orders, order_items, order_status_histories, payments
+- [ ] Migrations: stripe_webhook_events, order_number_sequences, settings, activity_logs (bonus)
+- [ ] Add foreign keys, unique constraints, indexes, soft deletes
+- [ ] Models with relationships, casts, `$fillable`
+- [ ] Seeders: permissions, roles, Super Admin, category tree, 20+ products with local images, 3 coupons, customers, orders in all statuses
+- [ ] ER diagram added to docs
+
+DoD: `php artisan migrate:fresh --seed` succeeds from scratch.
+
+---
+
+## P2: Authentication
+
+Status: ⬜
+
+Steps:
+- [ ] Customer register, login, logout, me
+- [ ] Staff login, logout, me on a separate endpoint with ability checks
+- [ ] Login throttle: 5 failed attempts, HTTP 429
+- [ ] Generic invalid-credentials error
+- [ ] Strong password policy rules
+- [ ] Forgot / reset password flow with Mailpit, token expiry, single use
+- [ ] Revoke tokens on logout and on password change
+- [ ] Email verification (bonus)
+- [ ] TOTP 2FA for staff (bonus)
+- [ ] Tests: generic error, throttle, customer token rejected on admin routes and reverse, password reset
+
+DoD: All auth tests pass.
+
+---
+
+## P3: Role-Based Access Control
+
+Status: ⬜
+
+Steps:
+- [ ] Finalize permission list and group them
+- [ ] Seed 5 roles with correct permission sets
+- [ ] `Gate::before` for Super Admin
+- [ ] Permission middleware on every admin route
+- [ ] Super Admin protection: not editable, not deletable, last one cannot be removed
+- [ ] Roles CRUD API and permission matrix API (grouped)
+- [ ] Staff CRUD API with role assignment and deactivation
+- [ ] `/admin/auth/me` returns effective permissions
+- [ ] Tests: allow/deny matrix per role, Super Admin immutability
+
+DoD: Unauthorized calls return 403. All RBAC tests pass.
+
+---
+
+## P4: Catalog API
+
+Status: ⬜
+
+Steps:
+- [ ] Category CRUD with tree support and delete guards
+- [ ] Product CRUD with validation (SKU unique, discount price lower than price)
+- [ ] Image upload, reorder, set primary, delete (type and size validation)
+- [ ] Sanitize product description (XSS)
+- [ ] Public endpoints: product list (search, category incl. children, price range, sort, pagination), product detail by slug, related products, category tree
+- [ ] Compute stock status; hide inactive products
+- [ ] Tests: filters, sorting, pagination metadata, inactive hidden, validation
+
+DoD: All catalog endpoints verified (Postman or tests).
+
+---
+
+## P5: Cart and Coupons
+
+Status: ⬜
+
+Steps:
+- [ ] Cart endpoints: get, add, update, remove, clear
+- [ ] Guest cart via `cart_token`; user cart in DB
+- [ ] Enforce stock, active status, quantity caps; reject out-of-stock
+- [ ] Merge guest cart on login
+- [ ] `PricingService` as the single source of subtotal, discount, shipping, tax, total
+- [ ] Coupon apply and remove with all rules (expiry, limits, min amount, per-user, max discount)
+- [ ] Cart warnings for changed or unavailable items
+- [ ] Tests: tampered price ignored, expired coupon rejected, merge correctness, out-of-stock add rejected
+
+DoD: Cart totals are always server-computed.
+
+---
+
+## P6: Checkout, Payment, Orders
+
+Status: ⬜
+
+Steps:
+- [ ] Address validation
+- [ ] Checkout endpoint: revalidate cart, coupon, stock; create pending order and Stripe PaymentIntent with idempotency key
+- [ ] Race-safe order number generator
+- [ ] Order item snapshots
+- [ ] Webhook endpoint: signature verification, idempotent event storage
+- [ ] Paid handler in a DB transaction with `lockForUpdate`: decrement stock, increment coupon usage, save payment, write status history
+- [ ] Insufficient stock after payment: auto refund, cancel order, clear message
+- [ ] Payment failure handling (order never paid)
+- [ ] Status transition service enforcing the transition table
+- [ ] Queued emails on status changes
+- [ ] Cancel flow: Stripe refund, stock restore, coupon usage restore
+- [ ] Customer order list and detail with ownership policy
+- [ ] Scheduled command to expire stale pending orders
+- [ ] Tests: success, failed payment, oversell race, duplicate webhook, invalid transition, IDOR, cancel restores stock
+
+DoD: Full flow verified with Stripe test cards (success and decline).
+
+---
+
+## P7: Admin API
+
+Status: ⬜
+
+Steps:
+- [ ] Dashboard stats endpoint (today's orders, revenue, customers, low stock) and 30-day sales series
+- [ ] Orders list (status filter, search) and detail
+- [ ] Order status update endpoint
+- [ ] Coupons CRUD
+- [ ] Customers list and detail with order history
+- [ ] Staff profile update and password change
+- [ ] Activity log (bonus)
+- [ ] Permission tests for every endpoint
+
+DoD: Every admin endpoint is permission-protected and documented.
+
+---
+
+## P8: Frontend Foundation
+
+Status: ⬜
+
+Steps:
+- [ ] Extract design tokens (colors, typography, spacing) from Figma
+- [ ] Storefront and admin layouts
+- [ ] Typed API client and BFF auth with httpOnly cookie
+- [ ] Route guards via Next.js middleware
+- [ ] Shared UI components: Button, Input, Modal, Toast, Skeleton, Pagination, Table
+- [ ] Error and 404 pages
+- [ ] Security headers in `next.config`
+
+DoD: Login works via cookie. Token is not accessible from client JavaScript.
+
+---
+
+## P9: Storefront Pages
+
+Status: ⬜
+
+Steps:
+- [ ] Home: hero, featured categories, product grids, promo sections
+- [ ] Listing: filters UI, search, sort, pagination, URL query sync
+- [ ] Product detail: gallery, info, stock status, add to cart, related products
+- [ ] Cart: quantity controls, remove, order summary, coupon field
+- [ ] Mobile (390px) responsive behavior
+- [ ] SEO metadata, loading skeletons, empty and error states
+
+DoD: Side-by-side comparison with Figma is acceptable. Accessibility check done.
+
+---
+
+## P10: Checkout UI and Account Pages
+
+Status: ⬜
+
+Steps:
+- [ ] Register, login, forgot and reset password pages
+- [ ] Checkout page: address form, order summary, Stripe Elements (card only)
+- [ ] Payment processing and failure states
+- [ ] Order confirmation page
+- [ ] My Orders list, order detail, cancel action
+- [ ] Guest cart merge on login
+
+DoD: Manual end-to-end purchase passes for success card and decline card.
+
+---
+
+## P11: Admin Panel UI
+
+Status: ⬜
+
+Steps:
+- [ ] Responsive layout with sidebar and permission-based menu and buttons
+- [ ] Dashboard: stat cards, 30-day chart, recent orders
+- [ ] Products: list, create/edit, multi-image upload, active toggle
+- [ ] Categories: tree CRUD
+- [ ] Orders: list, detail, status actions showing only valid next states
+- [ ] Coupons CRUD
+- [ ] Customers list and detail
+- [ ] Roles and Permissions matrix page
+- [ ] Staff management
+- [ ] Profile page
+- [ ] Dark mode (bonus)
+
+DoD: A Product Manager login sees only the menu items allowed by their permissions.
+
+---
+
+## P12: Security Hardening
+
+Status: ⬜
+
+Steps:
+- [ ] Test price and coupon tampering
+- [ ] Test IDOR on orders and carts
+- [ ] Test XSS payloads in descriptions, names, addresses
+- [ ] Test SQL injection payloads on search and filters
+- [ ] Test mass assignment (`type`, roles)
+- [ ] Audit API responses for sensitive fields
+- [ ] Verify security headers and CORS
+- [ ] Verify rate limits on login, register, reset, coupon, checkout
+- [ ] Run `composer audit` and `npm audit`
+- [ ] Production config check: `APP_DEBUG=false`, secure cookies
+- [ ] Write `SECURITY.md` with results
+
+DoD: Every SEC requirement has evidence (test or documented check).
+
+---
+
+## P13: Testing and Bug Fixing
+
+Status: ⬜
+
+Steps:
+- [ ] Feature tests: checkout, stock and oversell, coupons, RBAC, IDOR, throttling, webhook idempotency
+- [ ] Frontend smoke or e2e tests (optional)
+- [ ] Fix all failures and lint issues
+
+DoD: All tests green. Linters clean.
+
+---
+
+## P14: Docs, Docker, Final QA
+
+Status: ⬜
+
+Steps:
+- [ ] README (setup, env vars, DB, seed, queue/scheduler, tests, Stripe test cards, admin credentials)
+- [ ] ARCHITECTURE.md
+- [ ] API documentation (Postman or OpenAPI)
+- [ ] DECISIONS.md finalized
+- [ ] Docker Compose for one-command run (bonus)
+- [ ] CI pipeline (bonus)
+- [ ] Fresh-clone test following the README from scratch
+- [ ] Note skipped bonuses and reasons in README
+- [ ] Optional: video walkthrough script
+- [ ] Traceability matrix in `PROGRESS.md` fully filled
+
+DoD: A reviewer can run the project from a fresh clone in about 15 minutes.
+
+---
+
+## Traceability to the Original Brief
+
+| Brief section | Covered in |
+|---------------|-----------|
+| 3.1 Authentication | P2 |
+| 3.2 RBAC | P3, P11 |
+| 3.3 Storefront | P4, P5, P9, P10 |
+| 3.4 Order and inventory | P6 |
+| 3.5 Admin panel | P7, P11 |
+| 3.6 Security | P2 to P6, P12 |
+| 4 Database | P1 |
+| 5 API design | P4 to P7, P14 |
+| 6 Deliverables | P14 |
+| 7 Evaluation criteria | P12, P13, P14 |
+| 8 Rules | DECISIONS.md updated every phase |
+| 9 Bonus | P2, P8, P11, P13, P14 |
