@@ -17,11 +17,11 @@ Status legend: ⬜ Not started | 🟡 In progress | ✅ Done | ⛔ Blocked
 |-------|-------|----------------------|--------|
 | P0 | Project setup and tooling | OPS-1, OPS-7 | ✅ |
 | P1 | Database, models, seeders | NFR-DB, NFR-SEED | ✅ |
-| P2 | Authentication | FR-AUTH, SEC-2, SEC-6, SEC-10 | ⬜ |
-| P3 | RBAC | FR-RBAC | ⬜ |
-| P4 | Catalog API | FR-CAT, SEC-4 | ⬜ |
-| P5 | Cart and coupons | FR-CART, FR-COUPON, SEC-1 | ⬜ |
-| P6 | Checkout, payment, orders | FR-ORDER, SEC-5, SEC-12 | ⬜ |
+| P2 | Authentication | FR-AUTH, SEC-2, SEC-6, SEC-10 | ✅ |
+| P3 | RBAC | FR-RBAC | ✅ |
+| P4 | Catalog API | FR-CAT, SEC-4 | ✅ |
+| P5 | Cart and coupons | FR-CART, FR-COUPON, SEC-1 | ✅ |
+| P6 | Checkout, payment, orders | FR-ORDER, SEC-5, SEC-12 | ✅ |
 | P7 | Admin API | FR-ADMIN (API side) | ⬜ |
 | P8 | Frontend foundation | FR-UI-3, SEC-8, SEC-9 | ⬜ |
 | P9 | Storefront pages | FR-UI-1, FR-UI-2, FR-UI-4..6 | ⬜ |
@@ -149,25 +149,25 @@ DoD: Cart totals are always server-computed. — 20 cart/coupon tests green (116
 
 ## P6: Checkout, Payment, Orders
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Address validation
-- [ ] Checkout endpoint: revalidate cart, coupon, stock; create pending order and Stripe PaymentIntent with idempotency key
-- [ ] Race-safe order number generator
-- [ ] Order item snapshots
-- [ ] Webhook endpoint: signature verification, idempotent event storage
-- [ ] Paid handler in a DB transaction with `lockForUpdate`: decrement stock, increment coupon usage, save payment, write status history
-- [ ] Insufficient stock after payment: auto refund, cancel order, clear message
-- [ ] Payment failure handling (order never paid)
-- [ ] Status transition service enforcing the transition table
-- [ ] Queued emails on status changes
-- [ ] Cancel flow: Stripe refund, stock restore, coupon usage restore
-- [ ] Customer order list and detail with ownership policy
-- [ ] Scheduled command to expire stale pending orders
-- [ ] Tests: success, failed payment, oversell race, duplicate webhook, invalid transition, IDOR, cancel restores stock
+- [x] Address validation
+- [x] Checkout endpoint: revalidate cart, coupon, stock; create pending order and Stripe PaymentIntent with idempotency key
+- [x] Race-safe order number generator
+- [x] Order item snapshots
+- [x] Webhook endpoint: signature verification, idempotent event storage
+- [x] Paid handler in a DB transaction with `lockForUpdate`: decrement stock, increment coupon usage, save payment, write status history
+- [x] Insufficient stock after payment: auto refund, cancel order, clear message
+- [x] Payment failure handling (order never paid)
+- [x] Status transition service enforcing the transition table
+- [x] Queued emails on status changes
+- [x] Cancel flow: Stripe refund, stock restore, coupon usage restore
+- [x] Customer order list and detail with ownership policy
+- [x] Scheduled command to expire stale pending orders
+- [x] Tests: success, failed payment, oversell race, duplicate webhook, invalid transition, IDOR, cancel restores stock
 
-DoD: Full flow verified with Stripe test cards (success and decline).
+DoD: Full flow verified with Stripe test cards (success and decline). — Automated success, decline, duplicate-webhook, oversell, refund and cancel paths are green (26 order tests; 142 total / 842 assertions) using a fake gateway with real signature verification. The live Stripe test-card run is blocked locally because `.env` has no `STRIPE_KEY`/`STRIPE_SECRET`/`STRIPE_WEBHOOK_SECRET`; add test keys and repeat the card flow before a production demo.
 
 ---
 

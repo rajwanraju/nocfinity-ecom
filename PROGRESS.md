@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P5.
+Last updated: P6.
 
 ## Phase status
 
@@ -12,7 +12,7 @@ Last updated: P5.
 | P3 | RBAC | ✅ Done | see `git log --oneline` |
 | P4 | Catalog API | ✅ Done | see `git log --oneline` |
 | P5 | Cart and coupons | ✅ Done | see `git log --oneline` |
-| P6 | Checkout, payment, orders | ⬜ Not started | — |
+| P6 | Checkout, payment, orders | ✅ Done (live Stripe check blocked) | see `git log --oneline` |
 | P7 | Admin API | ⬜ Not started | — |
 | P8 | Frontend foundation | ⬜ Not started | — |
 | P9 | Storefront pages | ⬜ Not started | — |
@@ -58,22 +58,22 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-CART-5 | Guest merge on login | `CartService::mergeGuestCart` called from `CustomerAuthController@login` | `Cart\CartMergeTest` | ✅ |
 | FR-CART-6 | Cart warnings (inactive/price/stock) | `PricingService::quote` per-line `warnings` + `is_available` | `Cart\CartTest` warnings test | ✅ |
 | FR-COUPON-1 | Coupon fields and case-insensitive code | `coupons` schema; uppercase mutator in `Coupon` | `Cart\CouponTest` lowercase apply | ✅ |
-| FR-COUPON-2 | Validation on apply/checkout/payment | `CouponService::validate/validateForCart` (apply now; reused by P6) | `Cart\CouponTest` rule suite | 🟡 |
-| FR-COUPON-3 | Usage increment on paid, decrement on cancel | deferred to P6 paid/cancel transaction | — | ⬜ |
-| FR-ORDER-1 | Address validation | — | — | ⬜ |
-| FR-ORDER-2 | Server recalculation, minimal client input | — | — | ⬜ |
-| FR-ORDER-3 | Pending order + PaymentIntent + idempotency | — | — | ⬜ |
-| FR-ORDER-4 | Stripe Elements card only | — | — | ⬜ |
-| FR-ORDER-5 | Verified webhook marks paid + side effects | — | — | ⬜ |
-| FR-ORDER-6 | Failure never marks paid/decrements stock | — | — | ⬜ |
-| FR-ORDER-7 | Webhook signature + idempotency | — | — | ⬜ |
-| FR-ORDER-8 | Oversell prevention + auto refund | — | — | ⬜ |
-| FR-ORDER-9 | Race-safe `ORD-YYYY-NNNNNN` | — | — | ⬜ |
-| FR-ORDER-10 | Item snapshots | — | — | ⬜ |
-| FR-ORDER-11 | Transition table + history + email | — | — | ⬜ |
-| FR-ORDER-12 | Cancel paid: refund, stock, coupon restore | — | — | ⬜ |
-| FR-ORDER-13 | Customer order list/detail, IDOR 404 | — | — | ⬜ |
-| FR-ORDER-14 | Expire stale pending orders | — | — | ⬜ |
+| FR-COUPON-2 | Validation on apply/checkout/payment | `CouponService::validate` reused by `CheckoutService::resolveCoupon` and `PaymentWebhookService::couponStillValid` | `Cart\CouponTest`; `Orders\CheckoutTest` expired coupon; `Orders\WebhookTest` coupon expired before payment | ✅ |
+| FR-COUPON-3 | Usage increment on paid, decrement on cancel | `PaymentWebhookService::recordCouponUsage`; `OrderService::cancelSideEffects` deletes usage + decrements | `Orders\WebhookTest` paid usage; `Orders\OrderLifecycleTest` cancel restore | ✅ |
+| FR-ORDER-1 | Address validation | `CheckoutRequest` (name, phone, line1/2, city, state, postal code, ISO-2 country, notes) | `Orders\CheckoutTest` checkout validation | ✅ |
+| FR-ORDER-2 | Server recalculation, minimal client input | `CheckoutService` accepts only address/coupon; cart, prices, totals from DB via `PricingService` | `Orders\CheckoutTest` server totals | ✅ |
+| FR-ORDER-3 | Pending order + PaymentIntent + idempotency | `CheckoutService` + `Orders\Payment` + `checkout_idempotency_key` + `StripeGateway` | `Orders\CheckoutTest` creation + idempotent reuse | ✅ |
+| FR-ORDER-4 | Stripe Elements card only | backend returns `client_secret`; Elements UI is P10 | `Orders\CheckoutTest` client secret | 🟡 |
+| FR-ORDER-5 | Verified webhook marks paid + side effects | `PaymentWebhookService::succeeded` (order/payment/products locked) | `Orders\WebhookTest` paid, stock, coupon, history | ✅ |
+| FR-ORDER-6 | Failure never marks paid/decrements stock | `PaymentWebhookService::failed` updates payment only | `Orders\WebhookTest` failed payment | ✅ |
+| FR-ORDER-7 | Webhook signature + idempotency | `WebhookController` verifies before parsing; `stripe_webhook_events` unique event id | `Orders\WebhookSignatureTest`, `Orders\WebhookTest` duplicate | ✅ |
+| FR-ORDER-8 | Oversell prevention + auto refund | products locked in id order; `refundAndCancel` on stock/amount/coupon failure | `Orders\WebhookTest` oversell, amount mismatch, expired coupon | ✅ |
+| FR-ORDER-9 | Race-safe `ORD-YYYY-NNNNNN` | `OrderNumberGenerator` with locked `order_number_sequences` row | `Orders\OrderLifecycleTest` sequential numbers | ✅ |
+| FR-ORDER-10 | Item snapshots | `CheckoutService` snapshots name, SKU, price, quantity, line total, image path | `Orders\CheckoutTest` snapshot assertions | ✅ |
+| FR-ORDER-11 | Transition table + history + email | `OrderService::transition` + `OrderStatus::canTransitionTo` + queued `OrderStatusChanged` + history row | `Orders\OrderLifecycleTest` valid/invalid transitions | ✅ |
+| FR-ORDER-12 | Cancel paid: refund, stock, coupon restore | `OrderService::cancelSideEffects` (refund succeeded payment, restore stock, delete usage) | `Orders\OrderLifecycleTest` paid cancel | ✅ |
+| FR-ORDER-13 | Customer order list/detail, IDOR 404 | `OrderController` + `OrderPolicy` (denial → 404) | `Orders\OrderLifecycleTest` list/show isolation | ✅ |
+| FR-ORDER-14 | Expire stale pending orders | `orders:expire-pending` command, hourly schedule, configurable window | `Orders\OrderLifecycleTest` expiry | ✅ |
 | FR-ADMIN-1 | Dashboard stats + 30-day chart + recent orders | — | — | ⬜ |
 | FR-ADMIN-2 | Product admin list/create/edit | `Admin\ProductController` + image endpoints | `Catalog\AdminProductTest`, `Catalog\ProductImageTest` | 🟡 |
 | FR-ADMIN-3 | Category tree CRUD | `Admin\CategoryController` | `Catalog\AdminCategoryTest` | 🟡 |
@@ -100,14 +100,14 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | SEC-2 | bcrypt cost 12 | `backend/.env.example` (`BCRYPT_ROUNDS=12`), `User` hashed cast | `DatabaseSeederTest` asserts hash cost 12 | ✅ |
 | SEC-3 | No unsafe SQL | Eloquent/query builder throughout; only parameterless `SELECT 1` health probe | Pint + code review | ✅ |
 | SEC-4 | XSS sanitization | `app/Support/HtmlSanitizer.php` (HTMLPurifier allowlist) | `Catalog\AdminProductTest` XSS test | ✅ |
-| SEC-5 | IDOR policies | Cart lines resolve inside the caller's cart (404 otherwise); staff tokens rejected. Order policies arrive in P6 | `Cart\CartTest` isolation + staff-token tests | 🟡 |
+| SEC-5 | IDOR policies | Cart lines resolve inside the caller's cart; `OrderPolicy` + 404 for foreign orders; staff tokens rejected on customer routes | `Cart\CartTest` isolation; `Orders\OrderLifecycleTest` order isolation | ✅ |
 | SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
 | SEC-7 | No sensitive fields in responses | `UserResource` / `StaffResource` explicit field lists | Auth tests assert no password/token leakage | 🟡 |
 | SEC-8 | CORS allowlist + security headers | `backend/config/cors.php`, `SecurityHeaders.php`, `frontend/next.config.ts` | `tests/Feature/HealthTest.php` | 🟡 |
 | SEC-9 | CSRF posture (SameSite + origin checks) | — | — | ⬜ |
-| SEC-10 | Rate limits | named limiters in `AppServiceProvider`; login throttle in `AuthService`; `throttle:coupon` on coupon routes | `LoginThrottleTest` (429 + Retry-After), `Cart\CouponTest` throttle | 🟡 |
+| SEC-10 | Rate limits | named limiters in `AppServiceProvider`; login throttle in `AuthService`; `throttle:coupon`, `throttle:checkout` | `LoginThrottleTest` (429 + Retry-After), `Cart\CouponTest`, checkout limiter | 🟡 |
 | SEC-11 | Secure uploads/secrets | `.env.example`, `.gitignore` | review | 🟡 |
-| SEC-12 | Stripe signature verification | — | — | ⬜ |
+| SEC-12 | Stripe signature verification | `StripeSdkGateway::verifyWebhook` called before JSON parsing in `WebhookController` | `Orders\WebhookSignatureTest`; `Orders\WebhookTest` invalid signature | ✅ |
 | SEC-13 | Dependency audits | — | — | ⬜ |
 | SEC-14 | Validation both sides | Server: FormRequests for every write + query filters | Catalog/RBAC validation tests; frontend schemas from P8 | 🟡 |
 | NFR-DB-1 | FKs and unique constraints | `database/migrations/*` | `SchemaTest` + `migrate:fresh --seed` | ✅ |
@@ -255,3 +255,26 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - Checkout UI and cart page are P9/P10 work; this phase delivers the APIs.
 
 **Next:** P6 — checkout, Stripe PaymentIntent, webhook, orders, stock/coupon transactions.
+
+## P6 report
+
+**Done**
+
+- `POST /checkout` (customer token only) accepts address fields plus an optional coupon code, takes `Idempotency-Key` (or generates one), and returns the pending order, grand total and Stripe `client_secret`. The same key returns the same order and intent instead of charging twice. A `checkout_idempotency_key` unique index backs the lookup, and the cart is locked and emptied only after the order exists.
+- `CheckoutService` reloads the cart, locks products in id order, revalidates availability/quantity/coupon, and recalculates every amount through `PricingService`; the client cannot send items or prices. Order items snapshot product name, SKU, unit price, quantity, line total and image. A locked `order_number_sequences` row allocates `ORD-YYYY-NNNNNN`.
+- Stripe is behind `App\Support\Stripe\StripeGateway` (`StripeSdkGateway` in production, `FakeStripeGateway` in tests). Payment intents carry `order_id`, `order_number` and `user_id` metadata and an `order-{id}-payment` idempotency key. `payments.client_secret` is stored but hidden from serialization.
+- `POST /webhooks/stripe` verifies the `Stripe-Signature` over the raw body before parsing, then records the event id in `stripe_webhook_events`; duplicates are ignored. The service locks order, payment and products, checks amount and coupon validity, then decrements stock, records coupon usage, marks payment/order paid, writes history and queues `OrderStatusChanged`.
+- Failure paths: `payment_intent.payment_failed` marks only the payment failed (order stays pending, no stock moves). Oversell, amount mismatch or an expired coupon at payment time triggers a Stripe refund, cancellation, history row and notification. Unknown event types are stored without side effects.
+- `OrderService` owns the transition table (`pending → paid → processing → shipped → delivered`, cancellable states) and rejects invalid moves with 409. Cancelling pending releases the PaymentIntent; cancelling paid refunds, restores stock and removes coupon usage. `orders:expire-pending` runs hourly with a configurable window.
+- `GET /orders` (paginated, own orders) and `GET /orders/{order}` use `OrderPolicy`; a foreign order returns 404. The checkout route is rate-limited (`throttle:checkout`).
+- 26 order tests green (142 total / 842 assertions); Pint clean; bad-signature webhook (400) and unauthenticated checkout/orders (401) smoke-tested over HTTP against MySQL.
+
+**Not done / risks**
+
+- The DoD's live Stripe test-card run is blocked: local `.env` has no `STRIPE_KEY`, `STRIPE_SECRET` or `STRIPE_WEBHOOK_SECRET`. Tests exercise the fake gateway with real HMAC signature verification. Add test keys and repeat success/decline before the demo.
+- Refunds/PaymentIntent cancellations execute inside the DB transaction. A Stripe outage can hold locks or roll back the local cancellation after Stripe accepted the refund; the provider call is idempotency-keyed and retry-safe, but a queued outbox would be safer at scale.
+- Coupon usage and stock are adjusted only when the paid webhook wins the pending-state check; a webhook for an order already cancelled by the expiry command is ignored (Stripe's refund path is unaffected).
+- Order confirmation/My Orders pages and Stripe Elements belong to P9/P10; this phase delivers the APIs.
+
+**Next:** P7 — admin API: dashboard, order management/status updates, coupons CRUD, customers, staff profile.
+
