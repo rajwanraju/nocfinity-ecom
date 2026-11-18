@@ -7,13 +7,13 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\SettingService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 it('seeds the complete demo dataset from scratch', function (): void {
     $this->seed();
