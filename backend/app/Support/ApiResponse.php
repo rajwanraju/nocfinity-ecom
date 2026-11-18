@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -75,5 +76,20 @@ final class ApiResponse
         string $message = 'OK',
     ): JsonResponse {
         return self::success($items, $message, ['pagination' => $pagination]);
+    }
+
+    /**
+     * Standard pagination block shared by every list endpoint (FR-API-4).
+     *
+     * @return array{current_page: int, per_page: int, total: int, last_page: int}
+     */
+    public static function paginationMeta(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+            'last_page' => $paginator->lastPage(),
+        ];
     }
 }

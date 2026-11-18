@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\RoleController;
+use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
@@ -48,4 +51,26 @@ Route::prefix('admin/auth')->name('api.admin.auth.')->group(function (): void {
         Route::post('logout', [StaffAuthController::class, 'logout'])->name('logout');
         Route::post('change-password', [StaffAuthController::class, 'changePassword'])->name('password.change');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin: roles, permission matrix and staff management (P3)
+|--------------------------------------------------------------------------
+|
+| FR-RBAC-5: every route is gated by a permission, never by a role name.
+| abilities:staff keeps customer tokens out before permissions are checked.
+|
+*/
+Route::prefix('admin')->name('api.admin.')->middleware(['auth:sanctum', 'abilities:staff'])->group(function (): void {
+    Route::get('permissions', PermissionController::class)
+        ->middleware('permission:roles.manage')
+        ->name('permissions.index');
+
+    Route::apiResource('roles', RoleController::class)
+        ->middleware('permission:roles.manage');
+
+    Route::apiResource('staff', StaffController::class)
+        ->except(['create', 'edit'])
+        ->middleware('permission:staff.manage');
 });

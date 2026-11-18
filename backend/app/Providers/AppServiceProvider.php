@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use App\Policies\StaffPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,6 +26,25 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiters();
+        $this->configureAuthorization();
+    }
+
+    /**
+     * D8 / FR-RBAC-4: Super Admin bypasses permission checks. Policy abilities
+     * use bare names (view, update, delete) and must keep their target-level
+     * guards, so only namespaced permission abilities are short-circuited.
+     */
+    private function configureAuthorization(): void
+    {
+        Gate::policy(User::class, StaffPolicy::class);
+
+        Gate::before(function (?User $user, string $ability): ?bool {
+            if ($user === null) {
+                return null;
+            }
+
+            return $user->isSuperAdmin() && str_contains($ability, '.') ? true : null;
+        });
     }
 
     /**

@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
@@ -40,7 +40,7 @@ class RolePermissionSeeder extends Seeder
 
         $roles = [
             'Super Admin' => self::PERMISSIONS,
-            'Admin' => array_values(array_diff(self::PERMISSIONS, ['roles.manage', 'staff.manage'])),
+            'Admin' => array_values(array_diff(self::PERMISSIONS, ['roles.manage'])),
             'Product Manager' => [
                 'products.view',
                 'products.create',
