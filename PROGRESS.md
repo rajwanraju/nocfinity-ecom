@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P2.
+Last updated: P3.
 
 ## Phase status
 
@@ -9,7 +9,7 @@ Last updated: P2.
 | P0 | Project setup and tooling | ✅ Done | see `git log --oneline` |
 | P1 | Database, models, seeders | ✅ Done | see `git log --oneline` |
 | P2 | Authentication | ✅ Done | see `git log --oneline` |
-| P3 | RBAC | ⬜ Not started | — |
+| P3 | RBAC | ✅ Done | see `git log --oneline` |
 | P4 | Catalog API | ⬜ Not started | — |
 | P5 | Cart and coupons | ⬜ Not started | — |
 | P6 | Checkout, payment, orders | ⬜ Not started | — |
@@ -37,14 +37,14 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-AUTH-7 | Password policy (10+, mixed, number, symbol, pwned) | `app/Support/PasswordRules.php` | `CustomerAuthTest` weak-password dataset | ✅ |
 | FR-AUTH-8 | Token revocation + expiry | logout revokes current; password change/reset revokes all (except current) | `CustomerAuthTest`, `PasswordResetTest` | ✅ |
 | FR-AUTH-9 | TOTP 2FA for staff (bonus) | deferred — DECISIONS P2-5 | — | ⬜ |
-| FR-RBAC-1 | Five roles + custom | `database/seeders/RolePermissionSeeder.php` | `DatabaseSeederTest` | 🟡 |
-| FR-RBAC-2 | Granular permission list | `RolePermissionSeeder::PERMISSIONS` | `DatabaseSeederTest` | 🟡 |
-| FR-RBAC-3 | Roles↔permissions, staff↔roles | Spatie tables + `UserSeeder` | `DatabaseSeederTest` | 🟡 |
-| FR-RBAC-4 | Super Admin immutability, last one protected | — | — | ⬜ |
-| FR-RBAC-5 | Permission middleware on every admin route | — | — | ⬜ |
-| FR-RBAC-6 | `/admin/auth/me` effective permissions | `StaffAuthController@me`, `StaffResource` | `tests/Feature/Auth/StaffAuthTest.php` | 🟡 |
-| FR-RBAC-7 | Permission matrix API/UI | — | — | ⬜ |
-| FR-RBAC-8 | Staff management | — | — | ⬜ |
+| FR-RBAC-1 | Five roles + custom | `database/seeders/RolePermissionSeeder.php` | `DatabaseSeederTest`, `Rbac\RoleManagementTest` | ✅ |
+| FR-RBAC-2 | Granular permission list | `app/Support/PermissionRegistry.php`, `RolePermissionSeeder::PERMISSIONS` | `Rbac\RoleManagementTest` matrix test | ✅ |
+| FR-RBAC-3 | Roles↔permissions, staff↔roles | Spatie tables + `StaffService::create/update` | `Rbac\StaffManagementTest` | ✅ |
+| FR-RBAC-4 | Super Admin immutability, last one protected | `RoleService`, `StaffPolicy`, `Gate::before` | `Rbac\RoleManagementTest`, `Rbac\StaffManagementTest` | ✅ |
+| FR-RBAC-5 | Permission middleware on every admin route | `permission:*` on roles/staff/matrix routes | `Rbac\PermissionMiddlewareTest` role matrix | ✅ |
+| FR-RBAC-6 | `/admin/auth/me` effective permissions | `StaffAuthController@me`, `StaffResource` | `StaffAuthTest`, multi-role test | ✅ |
+| FR-RBAC-7 | Permission matrix API/UI | `Admin\PermissionController` grouped matrix API | `Rbac\RoleManagementTest` | 🟡 |
+| FR-RBAC-8 | Staff management | `Admin\StaffController`, `StaffService` | `Rbac\StaffManagementTest` | 🟡 |
 | FR-CAT-1 | Category tree, slug, delete guards | — | — | ⬜ |
 | FR-CAT-2 | Product fields, images, soft delete | — | — | ⬜ |
 | FR-CAT-3 | Search, category, price, sort, pagination | — | — | ⬜ |
@@ -80,7 +80,7 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-ADMIN-4 | Orders list/detail/status actions | — | — | ⬜ |
 | FR-ADMIN-5 | Coupons CRUD | — | — | ⬜ |
 | FR-ADMIN-6 | Customers list/detail + order history | — | — | ⬜ |
-| FR-ADMIN-7 | Roles matrix + staff management | — | — | ⬜ |
+| FR-ADMIN-7 | Roles matrix + staff management | RBAC APIs from P3 (`admin/permissions`, `admin/roles`, `admin/staff`) | `Rbac\*` feature tests | 🟡 |
 | FR-ADMIN-8 | Profile + change password | — | — | ⬜ |
 | FR-ADMIN-9 | Responsive admin UI, states, toasts, dialogs | — | — | ⬜ |
 | FR-ADMIN-10 | Dark mode + activity log (bonus) | — | — | ⬜ |
@@ -93,14 +93,14 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-API-1 | `/api/v1` REST | `backend/bootstrap/app.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-2 | Response envelope | `backend/app/Support/ApiResponse.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-3 | Correct status codes | `backend/app/Exceptions/ApiExceptionHandler.php` | `tests/Feature/HealthTest.php` (404) | 🟡 |
-| FR-API-4 | Pagination metadata | — | — | ⬜ |
-| FR-API-5 | Resources, FormRequests, central handler | `backend/app/Exceptions/ApiExceptionHandler.php` | Pint + tests | 🟡 |
+| FR-API-4 | Pagination metadata | `ApiResponse::paginationMeta()` + `StaffController@index` | `Rbac\StaffManagementTest` | 🟡 |
+| FR-API-5 | Resources, FormRequests, central handler | Role/Staff resources + request classes, central `ApiExceptionHandler` | Pint + feature tests | ✅ |
 | FR-API-6 | API documentation | — | — | ⬜ |
 | SEC-1 | Server-side pricing | — | — | ⬜ |
 | SEC-2 | bcrypt cost 12 | `backend/.env.example` (`BCRYPT_ROUNDS=12`), `User` hashed cast | `DatabaseSeederTest` asserts hash cost 12 | ✅ |
 | SEC-3 | No unsafe SQL | Eloquent/query builder throughout; only parameterless `SELECT 1` health probe | Pint + code review | ✅ |
 | SEC-4 | XSS sanitization | — | — | ⬜ |
-| SEC-5 | IDOR policies | — | — | ⬜ |
+| SEC-5 | IDOR policies | `StaffPolicy` guards target accounts; order/cart policies arrive with P5/P6 | `Rbac\StaffManagementTest` | 🟡 |
 | SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
 | SEC-7 | No sensitive fields in responses | `UserResource` / `StaffResource` explicit field lists | Auth tests assert no password/token leakage | 🟡 |
 | SEC-8 | CORS allowlist + security headers | `backend/config/cors.php`, `SecurityHeaders.php`, `frontend/next.config.ts` | `tests/Feature/HealthTest.php` | 🟡 |
@@ -192,3 +192,25 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - BFF cookie transport, CSRF origin checks and login UI are frontend work scheduled for P8–P10.
 
 **Next:** P3 — RBAC: gates, permission middleware, roles/permissions API, staff CRUD, Super Admin immutability.
+
+## P3 report
+
+**Done**
+
+- `PermissionRegistry` is the single source of truth for the 13 permissions grouped into six matrix groups (catalog, orders, marketing, customers, reports, administration).
+- Five seeded roles finalized; Admin now holds `staff.manage` but not `roles.manage`, so roles and the permission matrix remain Super-Admin-only. Custom roles are supported.
+- `Gate::before` lets Super Admin bypass permission checks; it deliberately does not bypass target-level policy abilities, so Super Admin accounts stay immutable.
+- Spatie `permission` middleware on every RBAC admin route; customer tokens are rejected by `abilities:staff` before permissions are evaluated.
+- Roles API: list/show/create/update/delete with validation, 403 on the system Super Admin role, and 409 when a role is still assigned to staff.
+- Grouped permission-matrix API (`GET /admin/permissions`) returns permission groups plus every role's assignments for the P11 checkbox matrix.
+- Staff API: paginated/filterable list, create with roles and password policy, update roles/details/is_active, deactivate via DELETE. Deactivation and password changes revoke the staff member's tokens.
+- Super Admin protection: accounts cannot be updated or deactivated through the API, staff cannot modify themselves, and only a Super Admin may assign the Super Admin role (no escalation).
+- 26 RBAC tests green (62 total / 361 assertions); Pint clean; real HTTP smoke test against MySQL verified login → matrix → staff list.
+
+**Not done / risks**
+
+- The matrix and staff screens are UI work for P11; this phase delivers the APIs.
+- Order/cart policies (SEC-5) arrive with their endpoints in P5/P6.
+- Staff DELETE deactivates rather than removes the row by design (DECISIONS P3-4).
+
+**Next:** P4 — catalog API: categories, products, images, public filters/search/sort/pagination.

@@ -95,20 +95,20 @@ DoD: All auth tests pass. — 36 tests / 233 assertions green; reset mail verifi
 
 ## P3: Role-Based Access Control
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Finalize permission list and group them
-- [ ] Seed 5 roles with correct permission sets
-- [ ] `Gate::before` for Super Admin
-- [ ] Permission middleware on every admin route
-- [ ] Super Admin protection: not editable, not deletable, last one cannot be removed
-- [ ] Roles CRUD API and permission matrix API (grouped)
-- [ ] Staff CRUD API with role assignment and deactivation
-- [ ] `/admin/auth/me` returns effective permissions
-- [ ] Tests: allow/deny matrix per role, Super Admin immutability
+- [x] Finalize permission list and group them
+- [x] Seed 5 roles with correct permission sets
+- [x] `Gate::before` for Super Admin
+- [x] Permission middleware on every admin route
+- [x] Super Admin protection: not editable, not deletable, last one cannot be removed
+- [x] Roles CRUD API and permission matrix API (grouped)
+- [x] Staff CRUD API with role assignment and deactivation
+- [x] `/admin/auth/me` returns effective permissions
+- [x] Tests: allow/deny matrix per role, Super Admin immutability
 
-DoD: Unauthorized calls return 403. All RBAC tests pass.
+DoD: Unauthorized calls return 403. All RBAC tests pass. — 26 RBAC tests green (62 total / 361 assertions); real HTTP smoke test passed.
 
 ---
 
