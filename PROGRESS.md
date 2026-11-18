@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P3.
+Last updated: P4.
 
 ## Phase status
 
@@ -10,7 +10,7 @@ Last updated: P3.
 | P1 | Database, models, seeders | ✅ Done | see `git log --oneline` |
 | P2 | Authentication | ✅ Done | see `git log --oneline` |
 | P3 | RBAC | ✅ Done | see `git log --oneline` |
-| P4 | Catalog API | ⬜ Not started | — |
+| P4 | Catalog API | ✅ Done | see `git log --oneline` |
 | P5 | Cart and coupons | ⬜ Not started | — |
 | P6 | Checkout, payment, orders | ⬜ Not started | — |
 | P7 | Admin API | ⬜ Not started | — |
@@ -45,12 +45,12 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-RBAC-6 | `/admin/auth/me` effective permissions | `StaffAuthController@me`, `StaffResource` | `StaffAuthTest`, multi-role test | ✅ |
 | FR-RBAC-7 | Permission matrix API/UI | `Admin\PermissionController` grouped matrix API | `Rbac\RoleManagementTest` | 🟡 |
 | FR-RBAC-8 | Staff management | `Admin\StaffController`, `StaffService` | `Rbac\StaffManagementTest` | 🟡 |
-| FR-CAT-1 | Category tree, slug, delete guards | — | — | ⬜ |
-| FR-CAT-2 | Product fields, images, soft delete | — | — | ⬜ |
-| FR-CAT-3 | Search, category, price, sort, pagination | — | — | ⬜ |
-| FR-CAT-4 | Product detail, stock status, related | — | — | ⬜ |
-| FR-CAT-5 | Inactive products hidden | — | — | ⬜ |
-| FR-CAT-6 | Image validation, random names, cleanup | — | — | ⬜ |
+| FR-CAT-1 | Category tree, slug, delete guards | `CategoryService`, `Admin\CategoryController` | `Catalog\AdminCategoryTest` | ✅ |
+| FR-CAT-2 | Product fields, images, soft delete | `ProductService`, `Admin\ProductController` | `Catalog\AdminProductTest` | ✅ |
+| FR-CAT-3 | Search, category, price, sort, pagination | `CatalogController`, `ProductIndexRequest` | `Catalog\PublicCatalogTest` | ✅ |
+| FR-CAT-4 | Product detail, stock status, related | `ProductService::publicShow`, `ProductResource` | `Catalog\PublicCatalogTest` | ✅ |
+| FR-CAT-5 | Inactive products hidden | `ProductService::publicQuery` (active + active category) | `Catalog\PublicCatalogTest` | ✅ |
+| FR-CAT-6 | Image validation, random names, cleanup | `ProductImageService`, image requests | `Catalog\ProductImageTest` | ✅ |
 | FR-CART-1 | DB carts for users, token carts for guests | — | — | ⬜ |
 | FR-CART-2 | Add/update/remove/clear, qty caps | — | — | ⬜ |
 | FR-CART-3 | Out-of-stock add rejected (422) | — | — | ⬜ |
@@ -75,8 +75,8 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-ORDER-13 | Customer order list/detail, IDOR 404 | — | — | ⬜ |
 | FR-ORDER-14 | Expire stale pending orders | — | — | ⬜ |
 | FR-ADMIN-1 | Dashboard stats + 30-day chart + recent orders | — | — | ⬜ |
-| FR-ADMIN-2 | Product admin list/create/edit | — | — | ⬜ |
-| FR-ADMIN-3 | Category tree CRUD | — | — | ⬜ |
+| FR-ADMIN-2 | Product admin list/create/edit | `Admin\ProductController` + image endpoints | `Catalog\AdminProductTest`, `Catalog\ProductImageTest` | 🟡 |
+| FR-ADMIN-3 | Category tree CRUD | `Admin\CategoryController` | `Catalog\AdminCategoryTest` | 🟡 |
 | FR-ADMIN-4 | Orders list/detail/status actions | — | — | ⬜ |
 | FR-ADMIN-5 | Coupons CRUD | — | — | ⬜ |
 | FR-ADMIN-6 | Customers list/detail + order history | — | — | ⬜ |
@@ -93,13 +93,13 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-API-1 | `/api/v1` REST | `backend/bootstrap/app.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-2 | Response envelope | `backend/app/Support/ApiResponse.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-3 | Correct status codes | `backend/app/Exceptions/ApiExceptionHandler.php` | `tests/Feature/HealthTest.php` (404) | 🟡 |
-| FR-API-4 | Pagination metadata | `ApiResponse::paginationMeta()` + `StaffController@index` | `Rbac\StaffManagementTest` | 🟡 |
+| FR-API-4 | Pagination metadata | `ApiResponse::paginationMeta()` used by staff and catalog lists | `StaffManagementTest`, `PublicCatalogTest` | ✅ |
 | FR-API-5 | Resources, FormRequests, central handler | Role/Staff resources + request classes, central `ApiExceptionHandler` | Pint + feature tests | ✅ |
 | FR-API-6 | API documentation | — | — | ⬜ |
 | SEC-1 | Server-side pricing | — | — | ⬜ |
 | SEC-2 | bcrypt cost 12 | `backend/.env.example` (`BCRYPT_ROUNDS=12`), `User` hashed cast | `DatabaseSeederTest` asserts hash cost 12 | ✅ |
 | SEC-3 | No unsafe SQL | Eloquent/query builder throughout; only parameterless `SELECT 1` health probe | Pint + code review | ✅ |
-| SEC-4 | XSS sanitization | — | — | ⬜ |
+| SEC-4 | XSS sanitization | `app/Support/HtmlSanitizer.php` (HTMLPurifier allowlist) | `Catalog\AdminProductTest` XSS test | ✅ |
 | SEC-5 | IDOR policies | `StaffPolicy` guards target accounts; order/cart policies arrive with P5/P6 | `Rbac\StaffManagementTest` | 🟡 |
 | SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
 | SEC-7 | No sensitive fields in responses | `UserResource` / `StaffResource` explicit field lists | Auth tests assert no password/token leakage | 🟡 |
@@ -109,10 +109,10 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | SEC-11 | Secure uploads/secrets | `.env.example`, `.gitignore` | review | 🟡 |
 | SEC-12 | Stripe signature verification | — | — | ⬜ |
 | SEC-13 | Dependency audits | — | — | ⬜ |
-| SEC-14 | Validation both sides | — | — | ⬜ |
+| SEC-14 | Validation both sides | Server: FormRequests for every write + query filters | Catalog/RBAC validation tests; frontend schemas from P8 | 🟡 |
 | NFR-DB-1 | FKs and unique constraints | `database/migrations/*` | `SchemaTest` + `migrate:fresh --seed` | ✅ |
 | NFR-DB-2 | Indexes and soft deletes | `database/migrations/*` (status/created_at/category/search indexes, soft deletes) | `SchemaTest` | ✅ |
-| NFR-DB-3 | Eager loading | Relations defined on all models; controllers eager-load from P4 | `DatabaseSeederTest` | 🟡 |
+| NFR-DB-3 | Eager loading | Catalog queries eager-load category/images; staff loads roles/permissions | Catalog + RBAC tests | ✅ |
 | NFR-DB-4 | `migrate:fresh --seed` | `DatabaseSeeder` | command run clean on MySQL 8.4 | ✅ |
 | NFR-SEED | Required seed data | `database/seeders/*`, local images in `database/seeders/assets/products` | `DatabaseSeederTest` | ✅ |
 | OPS-1 | Thin controllers, services, Pint/ESLint/Prettier/TS strict | Pint, ESLint, Prettier, `tsconfig` strict configured | `pint --test`, `eslint .`, `tsc --noEmit` all clean | 🟡 |
@@ -214,3 +214,23 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - Staff DELETE deactivates rather than removes the row by design (DECISIONS P3-4).
 
 **Next:** P4 — catalog API: categories, products, images, public filters/search/sort/pagination.
+
+## P4 report
+
+**Done**
+
+- Category tree: one-query nested tree, active-only public view, admin CRUD with auto slugs, cycle prevention and 409 delete guards for children/products (including soft-deleted rows).
+- Product CRUD: unique SKU/slug, integer-cent prices, discount must be lower than price (also on partial updates), soft delete with image rows/files removed.
+- Descriptions sanitized on write with HTMLPurifier (safe tag allowlist, no scripts/handlers/`javascript:` URLs).
+- Public catalog: `GET /categories`, `GET /products` (search name/SKU/description, category subtree, effective-price range, price/newest sorting, pagination), `GET /products/{slug}` with images, stock status from the settings threshold, and related products. Inactive products and inactive categories are never exposed.
+- Images: jpg/jpeg/png/webp up to 2 MB, random stored filenames, first image auto-primary, single-primary enforcement, reorder endpoint, file deletion with next-image promotion, and cross-product access returns 404.
+- Admin catalog routes are permission-gated (`categories.manage`, `products.view/create/edit/delete`) and use explicit `:id` bindings; public routes use slugs.
+- 34 catalog tests green (96 total / 516 assertions); Pint clean; public list/detail and category tree smoke-tested over HTTP against MySQL.
+
+**Not done / risks**
+
+- Admin product/category screens are P11 UI work; this phase delivers the APIs.
+- Image "replace" is implemented as upload + delete; there is no in-place file swap endpoint.
+- Description HTML is sanitized on write; existing rows must be re-saved if the allowlist changes.
+
+**Next:** P5 — cart and coupons: guest/user carts, merge on login, stock and totals, coupon validation.

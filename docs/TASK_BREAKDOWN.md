@@ -114,18 +114,18 @@ DoD: Unauthorized calls return 403. All RBAC tests pass. — 26 RBAC tests green
 
 ## P4: Catalog API
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Category CRUD with tree support and delete guards
-- [ ] Product CRUD with validation (SKU unique, discount price lower than price)
-- [ ] Image upload, reorder, set primary, delete (type and size validation)
-- [ ] Sanitize product description (XSS)
-- [ ] Public endpoints: product list (search, category incl. children, price range, sort, pagination), product detail by slug, related products, category tree
-- [ ] Compute stock status; hide inactive products
-- [ ] Tests: filters, sorting, pagination metadata, inactive hidden, validation
+- [x] Category CRUD with tree support and delete guards
+- [x] Product CRUD with validation (SKU unique, discount price lower than price)
+- [x] Image upload, reorder, set primary, delete (type and size validation)
+- [x] Sanitize product description (XSS)
+- [x] Public endpoints: product list (search, category incl. children, price range, sort, pagination), product detail by slug, related products, category tree
+- [x] Compute stock status; hide inactive products
+- [x] Tests: filters, sorting, pagination metadata, inactive hidden, validation
 
-DoD: All catalog endpoints verified (Postman or tests).
+DoD: All catalog endpoints verified (Postman or tests). — 34 catalog tests green (96 total / 516 assertions); public endpoints smoke-tested over HTTP.
 
 ---
 

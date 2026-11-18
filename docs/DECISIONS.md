@@ -74,4 +74,18 @@ Every assumption and ruling made while building this project. Newest phases appe
 | P3-6 | Deleting a role still assigned to staff returns `409 Conflict`; the Super Admin role always returns `403`. | Deleting an in-use role would silently strip permissions; Spatie would detach users. The system role is not user-owned. | Admins must reassign staff before deleting a role. |
 | P3-7 | `PermissionRegistry` (not the database) is the source of truth for permission names, labels and groups; the matrix API returns groups and roles in one response. | FR-RBAC-2/7 need a stable, ordered matrix; the seeder and UI both read the same list. | Adding a permission requires one registry entry plus a re-seed. |
 
+## P4 — Catalog
+
+| # | Decision | Why | Cost if wrong |
+|---|----------|-----|---------------|
+| P4-1 | Product descriptions are sanitized on write with **HTMLPurifier** (`ezyang/htmlpurifier`) using a small tag allowlist; no scripts, event handlers or `javascript:`/`data:` URLs. | SEC-4/FR-CAT-2; a hand-rolled regex sanitizer is not trustworthy. | One extra production dependency. Changing the allowlist requires re-saving old rows. |
+| P4-2 | The effective price is the discount only when `discount_price < price`; both the model (`currentPrice`) and SQL (`CASE …`) apply that guard. | Protects sorting/filters from invalid legacy/imported rows, and keeps PHP and SQL ordering identical. | A malformed discount silently falls back to the regular price instead of showing a higher "sale" price. |
+| P4-3 | Public product queries require `is_active` **and** an active non-deleted category; the category filter resolves the whole subtree in PHP from one category query. | FR-CAT-5 hides inactive products; the tree is small (3 levels) so one query plus in-memory traversal beats recursive SQL. | A very large category tree would need a materialized path/recursive CTE. |
+| P4-4 | Deleting a category returns `409` when any child or product (including soft-deleted) still references it. | The FK would otherwise fail with a 500, and soft-deleted products still hold the reference. | Admins must move/delete products first. |
+| P4-5 | Admin catalog routes bind by explicit `:id`; public product/category routes bind by slug. | Admin URLs stay stable while editors rename slugs; public URLs stay SEO-friendly. | Two binding conventions to remember. |
+| P4-6 | Deleting a product soft-deletes the row but hard-deletes its image rows and files. | FR-CAT-6 requires file cleanup; the product snapshot in order items is independent. | Restoring a soft-deleted product does not restore its images; they must be re-uploaded. |
+| P4-7 | Uploaded images use Laravel's hashed `store()` filename; the first image becomes primary automatically and deleting the primary promotes the next by `sort_order`. | FR-CAT-6 random names; the UI always has a primary image without a second request. | None. |
+| P4-8 | Slugs are generated from the name when omitted, with `-2`, `-3` suffixes checked across soft-deleted rows; an explicit slug is honoured and validated as unique. | Avoids 500s from the unique index and keeps public URLs stable. | Renaming without an explicit slug changes the product URL (documented admin behaviour). |
+
+
 
