@@ -114,4 +114,21 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login throttling and password policy
+    |--------------------------------------------------------------------------
+    |
+    | FR-AUTH-5: after this many failures for one email + IP, the login endpoint
+    | returns 429 with Retry-After for the decay window. FR-AUTH-7: the pwned
+    | password check is enabled by default and disabled only in tests.
+    |
+    */
+
+    'login_max_attempts' => (int) env('LOGIN_MAX_ATTEMPTS', 5),
+
+    'login_decay_seconds' => (int) env('LOGIN_DECAY_SECONDS', 60),
+
+    'password_check_pwned' => filter_var(env('PASSWORD_CHECK_PWNED', true), FILTER_VALIDATE_BOOL),
+
 ];

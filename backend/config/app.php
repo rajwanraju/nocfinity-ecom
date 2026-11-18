@@ -56,6 +56,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URLs
+    |--------------------------------------------------------------------------
+    |
+    | Password reset links and other emails must point at the Next.js app, not
+    | at this JSON API. D4: the Next.js BFF owns all browser-facing routes.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
+    'frontend_password_reset_url' => env(
+        'FRONTEND_PASSWORD_RESET_URL',
+        env('FRONTEND_URL', 'http://localhost:3000').'/reset-password',
+    ),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

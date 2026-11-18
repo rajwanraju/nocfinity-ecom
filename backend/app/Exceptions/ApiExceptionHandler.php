@@ -41,6 +41,17 @@ final class ApiExceptionHandler
                     [],
                     401,
                 ),
+                $e instanceof InvalidCredentialsException => ApiResponse::error(
+                    'Invalid credentials.',
+                    [],
+                    401,
+                ),
+                $e instanceof LoginThrottledException => ApiResponse::error(
+                    'Too many login attempts. Please try again later.',
+                    [],
+                    429,
+                    ['retry_after' => $e->retryAfter],
+                )->withHeaders(['Retry-After' => (string) $e->retryAfter]),
                 $e instanceof AuthorizationException,
                 $e instanceof AccessDeniedHttpException => ApiResponse::error(
                     'This action is unauthorized.',

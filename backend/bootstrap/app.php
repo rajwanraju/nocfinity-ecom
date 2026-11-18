@@ -6,6 +6,8 @@ use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,8 +18,19 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api/v1',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Sanctum's token-ability middleware (D3: staff/customer separation).
+        $middleware->alias([
+            'abilities' => CheckAbilities::class,
+            'ability' => CheckForAnyAbility::class,
+        ]);
+
         $middleware->api(prepend: [
             ForceJsonResponse::class,
+        ]);
+
+        // SEC-10: general API limit. Specific routes add stricter limiters.
+        $middleware->api(append: [
+            'throttle:api',
         ]);
 
         $middleware->append(SecurityHeaders::class);
