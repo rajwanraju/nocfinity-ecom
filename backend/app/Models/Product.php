@@ -71,10 +71,10 @@ class Product extends Model
         return $query->where('is_active', true);
     }
 
-    /** Effective price in cents (discount price wins when present). */
+    /** Effective price in cents (a valid discount price wins when present). */
     public function currentPrice(): int
     {
-        return $this->discount_price ?? $this->price;
+        return $this->hasDiscount() ? $this->discount_price : $this->price;
     }
 
     public function hasDiscount(): bool

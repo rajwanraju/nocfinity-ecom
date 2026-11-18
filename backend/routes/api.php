@@ -1,15 +1,28 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
+use App\Http\Controllers\Api\V1\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Api\V1\Admin\ProductImageController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
+use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\HealthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', HealthController::class)->name('api.health');
+
+/*
+|--------------------------------------------------------------------------
+| Public catalog (P4)
+|--------------------------------------------------------------------------
+*/
+Route::get('categories', [CatalogController::class, 'categories'])->name('api.categories.index');
+Route::get('products', [CatalogController::class, 'products'])->name('api.products.index');
+Route::get('products/{slug}', [CatalogController::class, 'product'])->name('api.products.show');
 
 /*
 |--------------------------------------------------------------------------
@@ -73,4 +86,39 @@ Route::prefix('admin')->name('api.admin.')->middleware(['auth:sanctum', 'abiliti
     Route::apiResource('staff', StaffController::class)
         ->except(['create', 'edit'])
         ->middleware('permission:staff.manage');
+
+    /*
+    | Catalog administration (P4). Explicit :id bindings keep admin URLs
+    | stable even when a slug changes.
+    */
+    Route::get('categories', [AdminCategoryController::class, 'index'])
+        ->middleware('permission:categories.manage')->name('categories.index');
+    Route::post('categories', [AdminCategoryController::class, 'store'])
+        ->middleware('permission:categories.manage')->name('categories.store');
+    Route::get('categories/{category:id}', [AdminCategoryController::class, 'show'])
+        ->middleware('permission:categories.manage')->name('categories.show');
+    Route::match(['put', 'patch'], 'categories/{category:id}', [AdminCategoryController::class, 'update'])
+        ->middleware('permission:categories.manage')->name('categories.update');
+    Route::delete('categories/{category:id}', [AdminCategoryController::class, 'destroy'])
+        ->middleware('permission:categories.manage')->name('categories.destroy');
+
+    Route::get('products', [AdminProductController::class, 'index'])
+        ->middleware('permission:products.view')->name('products.index');
+    Route::post('products', [AdminProductController::class, 'store'])
+        ->middleware('permission:products.create')->name('products.store');
+    Route::get('products/{product:id}', [AdminProductController::class, 'show'])
+        ->middleware('permission:products.view')->name('products.show');
+    Route::match(['put', 'patch'], 'products/{product:id}', [AdminProductController::class, 'update'])
+        ->middleware('permission:products.edit')->name('products.update');
+    Route::delete('products/{product:id}', [AdminProductController::class, 'destroy'])
+        ->middleware('permission:products.delete')->name('products.destroy');
+
+    Route::post('products/{product:id}/images', [ProductImageController::class, 'store'])
+        ->middleware('permission:products.edit')->name('products.images.store');
+    Route::patch('products/{product:id}/images/reorder', [ProductImageController::class, 'reorder'])
+        ->middleware('permission:products.edit')->name('products.images.reorder');
+    Route::patch('products/{product:id}/images/{image}', [ProductImageController::class, 'update'])
+        ->middleware('permission:products.edit')->name('products.images.update');
+    Route::delete('products/{product:id}/images/{image}', [ProductImageController::class, 'destroy'])
+        ->middleware('permission:products.edit')->name('products.images.destroy');
 });
