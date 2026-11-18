@@ -87,5 +87,17 @@ Every assumption and ruling made while building this project. Newest phases appe
 | P4-7 | Uploaded images use Laravel's hashed `store()` filename; the first image becomes primary automatically and deleting the primary promotes the next by `sort_order`. | FR-CAT-6 random names; the UI always has a primary image without a second request. | None. |
 | P4-8 | Slugs are generated from the name when omitted, with `-2`, `-3` suffixes checked across soft-deleted rows; an explicit slug is honoured and validated as unique. | Avoids 500s from the unique index and keeps public URLs stable. | Renaming without an explicit slug changes the product URL (documented admin behaviour). |
 
+## P5 — Cart and coupons
+
+| # | Decision | Why | Cost if wrong |
+|---|----------|-----|---------------|
+| P5-1 | Guest identity travels as `X-Cart-Token` (preferred by the BFF) or the `cart_token` cookie; a new guest cart returns the token in `meta.cart_token` and sets an httpOnly 30-day cookie. | D5 requires a cookie token, but the Next.js BFF proxies server-side and cannot rely on cross-origin cookies; the header keeps both clients working. | Two transport paths to keep aligned; both are covered by the same service. |
+| P5-2 | Totals include only available lines. Lines are still returned with `warnings` when the product was deactivated, its category was deactivated, stock ran out, stock fell below the quantity, or the price changed. The stored `unit_price` is never charged; `currentPrice()` is. | FR-CART-6 needs visibility, SEC-1 needs one authoritative price, and charging for an unavailable line would make the cart lie. | A cart can show a lower subtotal than the customer remembers; the warning explains why. Checkout revalidates anyway. |
+| P5-3 | Adding beyond the cap/stock returns `422` with the maximum quantity; merging on login instead caps silently. | The customer is present when adding and deserves a reason; merging is automatic and has no prompt to answer. | A merge can reduce quantities without an explicit message (the cart response shows the result). |
+| P5-4 | `CouponService` is shared by cart apply and (P6) checkout/payment. Per-user limits are checked only when a customer is authenticated; guest applies check every other rule. | FR-COUPON-2 requires revalidation at every step; a guest has no identity to count usages for. | A guest may apply a coupon they already used; checkout rejects it before payment. |
+| P5-5 | Percentage discounts floor to whole cents and honour `max_discount_amount`; fixed discounts never exceed the subtotal. Shipping is free when the **post-discount** subtotal reaches the threshold; tax is computed on the post-discount merchandise subtotal. | One deterministic rule set for cart and order totals. | A large coupon can make shipping chargeable again; the cart shows the exact totals before checkout. |
+| P5-6 | A coupon that becomes invalid between apply and read is detached from the cart automatically. | Quoting a discount the customer cannot get is worse than showing it removed. | The customer must re-enter a coupon that briefly lapsed; the cart always reflects reality. |
+| P5-7 | Customer cart lines are resolved through the caller's cart (`whereKey` inside the cart), returning 404 for foreign ids; staff/non-customer tokens get 403. | SEC-5 IDOR requirement and D3 surface separation, without leaking whether an item exists. | None; the owner path is unchanged. |
+
 
 

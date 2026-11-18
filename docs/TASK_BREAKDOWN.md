@@ -131,19 +131,19 @@ DoD: All catalog endpoints verified (Postman or tests). — 34 catalog tests gre
 
 ## P5: Cart and Coupons
 
-Status: ⬜
+Status: ✅ Done
 
 Steps:
-- [ ] Cart endpoints: get, add, update, remove, clear
-- [ ] Guest cart via `cart_token`; user cart in DB
-- [ ] Enforce stock, active status, quantity caps; reject out-of-stock
-- [ ] Merge guest cart on login
-- [ ] `PricingService` as the single source of subtotal, discount, shipping, tax, total
-- [ ] Coupon apply and remove with all rules (expiry, limits, min amount, per-user, max discount)
-- [ ] Cart warnings for changed or unavailable items
-- [ ] Tests: tampered price ignored, expired coupon rejected, merge correctness, out-of-stock add rejected
+- [x] Cart endpoints: get, add, update, remove, clear
+- [x] Guest cart via `cart_token`; user cart in DB
+- [x] Enforce stock, active status, quantity caps; reject out-of-stock
+- [x] Merge guest cart on login
+- [x] `PricingService` as the single source of subtotal, discount, shipping, tax, total
+- [x] Coupon apply and remove with all rules (expiry, limits, min amount, per-user, max discount)
+- [x] Cart warnings for changed or unavailable items
+- [x] Tests: tampered price ignored, expired coupon rejected, merge correctness, out-of-stock add rejected
 
-DoD: Cart totals are always server-computed.
+DoD: Cart totals are always server-computed. — 20 cart/coupon tests green (116 total / 666 assertions); guest cart → coupon → totals smoke-tested over HTTP against MySQL.
 
 ---
 

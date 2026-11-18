@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P4.
+Last updated: P5.
 
 ## Phase status
 
@@ -11,7 +11,7 @@ Last updated: P4.
 | P2 | Authentication | ✅ Done | see `git log --oneline` |
 | P3 | RBAC | ✅ Done | see `git log --oneline` |
 | P4 | Catalog API | ✅ Done | see `git log --oneline` |
-| P5 | Cart and coupons | ⬜ Not started | — |
+| P5 | Cart and coupons | ✅ Done | see `git log --oneline` |
 | P6 | Checkout, payment, orders | ⬜ Not started | — |
 | P7 | Admin API | ⬜ Not started | — |
 | P8 | Frontend foundation | ⬜ Not started | — |
@@ -51,15 +51,15 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-CAT-4 | Product detail, stock status, related | `ProductService::publicShow`, `ProductResource` | `Catalog\PublicCatalogTest` | ✅ |
 | FR-CAT-5 | Inactive products hidden | `ProductService::publicQuery` (active + active category) | `Catalog\PublicCatalogTest` | ✅ |
 | FR-CAT-6 | Image validation, random names, cleanup | `ProductImageService`, image requests | `Catalog\ProductImageTest` | ✅ |
-| FR-CART-1 | DB carts for users, token carts for guests | — | — | ⬜ |
-| FR-CART-2 | Add/update/remove/clear, qty caps | — | — | ⬜ |
-| FR-CART-3 | Out-of-stock add rejected (422) | — | — | ⬜ |
-| FR-CART-4 | Server-calculated totals | — | — | ⬜ |
-| FR-CART-5 | Guest merge on login | — | — | ⬜ |
-| FR-CART-6 | Cart warnings (inactive/price/stock) | — | — | ⬜ |
-| FR-COUPON-1 | Coupon fields and case-insensitive code | — | — | ⬜ |
-| FR-COUPON-2 | Validation on apply/checkout/payment | — | — | ⬜ |
-| FR-COUPON-3 | Usage increment on paid, decrement on cancel | — | — | ⬜ |
+| FR-CART-1 | DB carts for users, token carts for guests | `CartService::resolve`, `X-Cart-Token` header / httpOnly `cart_token` cookie | `Cart\CartTest` guest cart test | ✅ |
+| FR-CART-2 | Add/update/remove/clear, qty caps | `CartController`, `CartService`, `Add/UpdateCartItemRequest` | `Cart\CartTest` lifecycle + caps tests | ✅ |
+| FR-CART-3 | Out-of-stock add rejected (422) | `CartService::purchasableProduct` | `Cart\CartTest` unavailable-products test | ✅ |
+| FR-CART-4 | Server-calculated totals | `PricingService::quote` (subtotal, discount, shipping, tax, total) | `Cart\CartTest` tampered-price test | ✅ |
+| FR-CART-5 | Guest merge on login | `CartService::mergeGuestCart` called from `CustomerAuthController@login` | `Cart\CartMergeTest` | ✅ |
+| FR-CART-6 | Cart warnings (inactive/price/stock) | `PricingService::quote` per-line `warnings` + `is_available` | `Cart\CartTest` warnings test | ✅ |
+| FR-COUPON-1 | Coupon fields and case-insensitive code | `coupons` schema; uppercase mutator in `Coupon` | `Cart\CouponTest` lowercase apply | ✅ |
+| FR-COUPON-2 | Validation on apply/checkout/payment | `CouponService::validate/validateForCart` (apply now; reused by P6) | `Cart\CouponTest` rule suite | 🟡 |
+| FR-COUPON-3 | Usage increment on paid, decrement on cancel | deferred to P6 paid/cancel transaction | — | ⬜ |
 | FR-ORDER-1 | Address validation | — | — | ⬜ |
 | FR-ORDER-2 | Server recalculation, minimal client input | — | — | ⬜ |
 | FR-ORDER-3 | Pending order + PaymentIntent + idempotency | — | — | ⬜ |
@@ -96,16 +96,16 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-API-4 | Pagination metadata | `ApiResponse::paginationMeta()` used by staff and catalog lists | `StaffManagementTest`, `PublicCatalogTest` | ✅ |
 | FR-API-5 | Resources, FormRequests, central handler | Role/Staff resources + request classes, central `ApiExceptionHandler` | Pint + feature tests | ✅ |
 | FR-API-6 | API documentation | — | — | ⬜ |
-| SEC-1 | Server-side pricing | — | — | ⬜ |
+| SEC-1 | Server-side pricing | `PricingService` quotes carts from DB products + settings; client prices ignored | `Cart\CartTest` tampered-price test; reused by P6 | ✅ |
 | SEC-2 | bcrypt cost 12 | `backend/.env.example` (`BCRYPT_ROUNDS=12`), `User` hashed cast | `DatabaseSeederTest` asserts hash cost 12 | ✅ |
 | SEC-3 | No unsafe SQL | Eloquent/query builder throughout; only parameterless `SELECT 1` health probe | Pint + code review | ✅ |
 | SEC-4 | XSS sanitization | `app/Support/HtmlSanitizer.php` (HTMLPurifier allowlist) | `Catalog\AdminProductTest` XSS test | ✅ |
-| SEC-5 | IDOR policies | `StaffPolicy` guards target accounts; order/cart policies arrive with P5/P6 | `Rbac\StaffManagementTest` | 🟡 |
+| SEC-5 | IDOR policies | Cart lines resolve inside the caller's cart (404 otherwise); staff tokens rejected. Order policies arrive in P6 | `Cart\CartTest` isolation + staff-token tests | 🟡 |
 | SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
 | SEC-7 | No sensitive fields in responses | `UserResource` / `StaffResource` explicit field lists | Auth tests assert no password/token leakage | 🟡 |
 | SEC-8 | CORS allowlist + security headers | `backend/config/cors.php`, `SecurityHeaders.php`, `frontend/next.config.ts` | `tests/Feature/HealthTest.php` | 🟡 |
 | SEC-9 | CSRF posture (SameSite + origin checks) | — | — | ⬜ |
-| SEC-10 | Rate limits | named limiters in `AppServiceProvider`; login throttle in `AuthService` | `LoginThrottleTest` (429 + Retry-After) | 🟡 |
+| SEC-10 | Rate limits | named limiters in `AppServiceProvider`; login throttle in `AuthService`; `throttle:coupon` on coupon routes | `LoginThrottleTest` (429 + Retry-After), `Cart\CouponTest` throttle | 🟡 |
 | SEC-11 | Secure uploads/secrets | `.env.example`, `.gitignore` | review | 🟡 |
 | SEC-12 | Stripe signature verification | — | — | ⬜ |
 | SEC-13 | Dependency audits | — | — | ⬜ |
@@ -234,3 +234,24 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - Description HTML is sanitized on write; existing rows must be re-saved if the allowlist changes.
 
 **Next:** P5 — cart and coupons: guest/user carts, merge on login, stock and totals, coupon validation.
+
+## P5 report
+
+**Done**
+
+- Guest carts keyed by a UUID `cart_token` (accepted via `X-Cart-Token` or httpOnly cookie, returned in `meta.cart_token` and set as a 30-day cookie); customers always resolve to their unique DB cart. A guest token presented alongside a customer token is merged before the request is served.
+- Cart lifecycle: `GET /cart`, `POST /cart/items`, `PATCH|DELETE /cart/items/{id}`, `DELETE /cart`, plus coupon apply/remove. Quantities are 1…min(stock, `cart.max_quantity_per_line`); out-of-stock, inactive products and inactive categories are rejected with 422.
+- `PricingService` is the only money calculator: current effective price per line, subtotal, coupon discount (percentage floored + `max_discount_amount` cap, fixed capped at subtotal), shipping (free at the post-discount threshold), tax and total. Stored `unit_price` is a change-detection snapshot only.
+- Cart responses flag unavailable lines (`product_inactive`, `category_inactive`, `out_of_stock`, `insufficient_stock`, `price_changed`) and exclude unavailable lines from totals.
+- Login merges the guest cart: quantities summed and capped by stock/per-line cap, unavailable products dropped, and the guest cart deleted so a repeated token cannot merge twice. A guest coupon is adopted only when the user cart has none.
+- `CouponService` centralizes expiry, not-started, inactive, total-limit, per-user-limit and minimum-order checks with a specific message for each; expired coupons are detached on read. Coupon attempts are throttled (`throttle:coupon`).
+- Cart lines are looked up inside the caller's cart only (404 otherwise); staff tokens are rejected on customer cart endpoints.
+- 20 cart/coupon tests green (116 total / 666 assertions); Pint clean; live HTTP smoke test against MySQL verified guest add → `WELCOME10` → discount/shipping/total.
+
+**Not done / risks**
+
+- Per-user coupon limits cannot be enforced for a guest at apply time; checkout (P6) revalidates against the authenticated customer.
+- Coupon usage increments/decrements and stock decrements belong to the paid/cancel transaction in P6.
+- Checkout UI and cart page are P9/P10 work; this phase delivers the APIs.
+
+**Next:** P6 — checkout, Stripe PaymentIntent, webhook, orders, stock/coupon transactions.
