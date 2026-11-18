@@ -9,6 +9,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
+use App\Services\CartService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,10 @@ class CustomerAuthController
 {
     use BuildsAuthPayload;
 
-    public function __construct(private readonly AuthService $authService) {}
+    public function __construct(
+        private readonly AuthService $authService,
+        private readonly CartService $cartService,
+    ) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -36,6 +40,12 @@ class CustomerAuthController
             $request->string('password')->toString(),
             $request->ip() ?? '',
             UserType::Customer,
+        );
+
+        // FR-CART-5: a guest cart follows the customer into their account.
+        $this->cartService->mergeGuestCart(
+            $result['user'],
+            $this->cartService->tokenFromRequest($request),
         );
 
         return ApiResponse::success($this->authPayload($result), 'Logged in successfully.');

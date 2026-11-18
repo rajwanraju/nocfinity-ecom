@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\StaffAuthController;
+use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\HealthController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,26 @@ Route::get('/health', HealthController::class)->name('api.health');
 Route::get('categories', [CatalogController::class, 'categories'])->name('api.categories.index');
 Route::get('products', [CatalogController::class, 'products'])->name('api.products.index');
 Route::get('products/{slug}', [CatalogController::class, 'product'])->name('api.products.show');
+
+/*
+|--------------------------------------------------------------------------
+| Cart (P5): guest token or customer Sanctum token
+|--------------------------------------------------------------------------
+*/
+Route::prefix('cart')->name('api.cart.')->group(function (): void {
+    Route::get('/', [CartController::class, 'show'])->name('show');
+    Route::delete('/', [CartController::class, 'clear'])->name('clear');
+
+    Route::post('items', [CartController::class, 'storeItem'])->name('items.store');
+    Route::patch('items/{item}', [CartController::class, 'updateItem'])->name('items.update');
+    Route::delete('items/{item}', [CartController::class, 'destroyItem'])->name('items.destroy');
+
+    // SEC-10: coupon attempts are limited per customer/IP.
+    Route::middleware('throttle:coupon')->group(function (): void {
+        Route::post('coupon', [CartController::class, 'applyCoupon'])->name('coupon.apply');
+        Route::delete('coupon', [CartController::class, 'removeCoupon'])->name('coupon.remove');
+    });
+});
 
 /*
 |--------------------------------------------------------------------------

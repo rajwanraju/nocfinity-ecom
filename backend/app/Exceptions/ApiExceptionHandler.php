@@ -46,6 +46,11 @@ final class ApiExceptionHandler
                     [],
                     401,
                 ),
+                $e instanceof CouponException => ApiResponse::error(
+                    'The given data was invalid.',
+                    ['code' => [$e->getMessage()]],
+                    422,
+                ),
                 $e instanceof LoginThrottledException => ApiResponse::error(
                     'Too many login attempts. Please try again later.',
                     [],
