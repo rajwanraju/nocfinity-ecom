@@ -1,10 +1,15 @@
 <?php
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Coupon;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderStatusHistory;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
+use App\Support\OrderNumberGenerator;
 use App\Support\Stripe\StripeGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
@@ -103,6 +108,83 @@ function placeOrderWithFakeStripe(
     $order = Order::query()->findOrFail($checkout->json('data.order.id'));
 
     return [$order, $stripe, (string) $checkout->json('data.order.order_number')];
+}
+
+/**
+ * Direct order fixture for admin API tests (checkout itself is covered by
+ * Orders\CheckoutTest). One default item and one successful payment are added.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @param  array<int, array<string, mixed>>  $items
+ */
+function makeOrderFor(
+    User $customer,
+    OrderStatus $status = OrderStatus::Paid,
+    array $overrides = [],
+    array $items = [],
+): Order {
+    $grandTotal = (int) ($overrides['grand_total'] ?? 1000);
+
+    $order = Order::query()->create([
+        'order_number' => app(OrderNumberGenerator::class)->next(),
+        'user_id' => $customer->id,
+        'status' => $status,
+        'subtotal' => $grandTotal,
+        'discount_total' => 0,
+        'shipping_total' => 0,
+        'tax_total' => 0,
+        'grand_total' => $grandTotal,
+        'customer_name' => $customer->name,
+        'customer_email' => $customer->email,
+        'shipping_name' => $customer->name,
+        'shipping_phone' => '+1 555 010 2030',
+        'shipping_line1' => '144 Prince Street',
+        'shipping_city' => 'New York',
+        'shipping_state' => 'NY',
+        'shipping_postal_code' => '10012',
+        'shipping_country' => 'US',
+        'placed_at' => now(),
+        'paid_at' => $status->isPaid() ? now() : null,
+        ...$overrides,
+    ]);
+
+    if ($items === []) {
+        $items = [[
+            'product_name' => 'Test product',
+            'product_sku' => 'SKU-TEST',
+            'unit_price' => $grandTotal,
+            'quantity' => 1,
+            'line_total' => $grandTotal,
+        ]];
+    }
+
+    foreach ($items as $item) {
+        OrderItem::query()->create([
+            'order_id' => $order->id,
+            ...$item,
+        ]);
+    }
+
+    Payment::query()->create([
+        'order_id' => $order->id,
+        'provider' => 'stripe',
+        'provider_payment_intent_id' => 'pi_test_'.$order->id,
+        'client_secret' => 'pi_test_'.$order->id.'_secret',
+        'amount' => $grandTotal,
+        'currency' => 'usd',
+        'status' => $status->isPaid() ? PaymentStatus::Succeeded : PaymentStatus::RequiresPaymentMethod,
+        'paid_at' => $status->isPaid() ? now() : null,
+    ]);
+
+    OrderStatusHistory::query()->create([
+        'order_id' => $order->id,
+        'from_status' => null,
+        'to_status' => $status,
+        'changed_by' => null,
+        'note' => 'Fixture.',
+    ]);
+
+    return $order->refresh()->load(['items', 'latestPayment', 'statusHistories', 'user']);
 }
 
 /**
