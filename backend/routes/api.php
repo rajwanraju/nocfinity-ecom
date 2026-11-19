@@ -1,9 +1,15 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\ActivityLogController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Api\V1\Admin\CouponController as AdminCouponController;
+use App\Http\Controllers\Api\V1\Admin\CustomerController as AdminCustomerController;
+use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\PermissionController;
 use App\Http\Controllers\Api\V1\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController;
+use App\Http\Controllers\Api\V1\Admin\ProfileController;
 use App\Http\Controllers\Api\V1\Admin\RoleController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Auth\CustomerAuthController;
@@ -123,6 +129,41 @@ Route::prefix('admin/auth')->name('api.admin.auth.')->group(function (): void {
 |
 */
 Route::prefix('admin')->name('api.admin.')->middleware(['auth:sanctum', 'abilities:staff'])->group(function (): void {
+    Route::get('dashboard', [DashboardController::class, 'index'])
+        ->middleware('permission:reports.view')
+        ->name('dashboard.index');
+
+    Route::get('activity-logs', [ActivityLogController::class, 'index'])
+        ->middleware('permission:roles.manage')
+        ->name('activity-logs.index');
+
+    // Staff self-service (FR-ADMIN-8); password change lives with the auth API.
+    Route::get('profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    /*
+    | Orders administration (P7): the list/detail are read-only; the status
+    | endpoint is the only write and never accepts `paid`.
+    */
+    Route::get('orders', [AdminOrderController::class, 'index'])
+        ->middleware('permission:orders.view')->name('orders.index');
+    Route::get('orders/{order}', [AdminOrderController::class, 'show'])
+        ->whereNumber('order')
+        ->middleware('permission:orders.view')->name('orders.show');
+    Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus'])
+        ->whereNumber('order')
+        ->middleware('permission:orders.update_status')->name('orders.status');
+
+    Route::apiResource('coupons', AdminCouponController::class)
+        ->except(['create', 'edit'])
+        ->middleware('permission:coupons.manage');
+
+    Route::get('customers', [AdminCustomerController::class, 'index'])
+        ->middleware('permission:customers.view')->name('customers.index');
+    Route::get('customers/{customer}', [AdminCustomerController::class, 'show'])
+        ->whereNumber('customer')
+        ->middleware('permission:customers.view')->name('customers.show');
+
     Route::get('permissions', PermissionController::class)
         ->middleware('permission:roles.manage')
         ->name('permissions.index');
