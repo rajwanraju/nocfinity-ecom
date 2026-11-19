@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P6.
+Last updated: P7.
 
 ## Phase status
 
@@ -13,7 +13,7 @@ Last updated: P6.
 | P4 | Catalog API | ✅ Done | see `git log --oneline` |
 | P5 | Cart and coupons | ✅ Done | see `git log --oneline` |
 | P6 | Checkout, payment, orders | ✅ Done (live Stripe check blocked) | see `git log --oneline` |
-| P7 | Admin API | ⬜ Not started | — |
+| P7 | Admin API | ✅ Done | see `git log --oneline` |
 | P8 | Frontend foundation | ⬜ Not started | — |
 | P9 | Storefront pages | ⬜ Not started | — |
 | P10 | Checkout UI and account pages | ⬜ Not started | — |
@@ -74,16 +74,16 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-ORDER-12 | Cancel paid: refund, stock, coupon restore | `OrderService::cancelSideEffects` (refund succeeded payment, restore stock, delete usage) | `Orders\OrderLifecycleTest` paid cancel | ✅ |
 | FR-ORDER-13 | Customer order list/detail, IDOR 404 | `OrderController` + `OrderPolicy` (denial → 404) | `Orders\OrderLifecycleTest` list/show isolation | ✅ |
 | FR-ORDER-14 | Expire stale pending orders | `orders:expire-pending` command, hourly schedule, configurable window | `Orders\OrderLifecycleTest` expiry | ✅ |
-| FR-ADMIN-1 | Dashboard stats + 30-day chart + recent orders | — | — | ⬜ |
+| FR-ADMIN-1 | Dashboard stats + 30-day chart + recent orders | `DashboardService`, `Admin\DashboardController` (`reports.view`) | `Admin\DashboardTest` | ✅ |
 | FR-ADMIN-2 | Product admin list/create/edit | `Admin\ProductController` + image endpoints | `Catalog\AdminProductTest`, `Catalog\ProductImageTest` | 🟡 |
 | FR-ADMIN-3 | Category tree CRUD | `Admin\CategoryController` | `Catalog\AdminCategoryTest` | 🟡 |
-| FR-ADMIN-4 | Orders list/detail/status actions | — | — | ⬜ |
-| FR-ADMIN-5 | Coupons CRUD | — | — | ⬜ |
-| FR-ADMIN-6 | Customers list/detail + order history | — | — | ⬜ |
+| FR-ADMIN-4 | Orders list/detail/status actions | `Admin\OrderController`, `AdminOrderResource`, `OrderService` (`orders.view` / `orders.update_status`; cancel also needs `orders.cancel`) | `Admin\AdminOrderTest` | ✅ |
+| FR-ADMIN-5 | Coupons CRUD | `Admin\CouponController`, `CouponRequest`, `CouponResource` (`coupons.manage`) | `Admin\AdminCouponTest` | ✅ |
+| FR-ADMIN-6 | Customers list/detail + order history | `Admin\CustomerController`, `CustomerResource` (customers only; `customers.view`) | `Admin\AdminCustomerTest` | ✅ |
 | FR-ADMIN-7 | Roles matrix + staff management | RBAC APIs from P3 (`admin/permissions`, `admin/roles`, `admin/staff`) | `Rbac\*` feature tests | 🟡 |
-| FR-ADMIN-8 | Profile + change password | — | — | ⬜ |
+| FR-ADMIN-8 | Profile + change password | `Admin\ProfileController`, `UpdateProfileRequest`; password via `admin/auth/change-password` | `Admin\AdminProfileTest` | ✅ |
 | FR-ADMIN-9 | Responsive admin UI, states, toasts, dialogs | — | — | ⬜ |
-| FR-ADMIN-10 | Dark mode + activity log (bonus) | — | — | ⬜ |
+| FR-ADMIN-10 | Dark mode + activity log (bonus) | activity log: `ActivityLogger`, `Admin\ActivityLogController` (`roles.manage`); dark mode is P11 | `Admin\ActivityLogTest` | 🟡 |
 | FR-UI-1 | All storefront pages | — | — | ⬜ |
 | FR-UI-2 | Matches Figma 1440/390 | — | — | ⬜ |
 | FR-UI-3 | Consistent visual language on undesigned screens | — | — | ⬜ |
@@ -100,7 +100,7 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | SEC-2 | bcrypt cost 12 | `backend/.env.example` (`BCRYPT_ROUNDS=12`), `User` hashed cast | `DatabaseSeederTest` asserts hash cost 12 | ✅ |
 | SEC-3 | No unsafe SQL | Eloquent/query builder throughout; only parameterless `SELECT 1` health probe | Pint + code review | ✅ |
 | SEC-4 | XSS sanitization | `app/Support/HtmlSanitizer.php` (HTMLPurifier allowlist) | `Catalog\AdminProductTest` XSS test | ✅ |
-| SEC-5 | IDOR policies | Cart lines resolve inside the caller's cart; `OrderPolicy` + 404 for foreign orders; staff tokens rejected on customer routes | `Cart\CartTest` isolation; `Orders\OrderLifecycleTest` order isolation | ✅ |
+| SEC-5 | IDOR policies | Cart lines resolve inside the caller's cart; `OrderPolicy` + 404 for foreign orders; staff tokens rejected on customer routes; staff IDs 404 on admin customers; blanket `AdminPermissionTest` | `Cart\CartTest`; `Orders\OrderLifecycleTest`; `Admin\AdminPermissionTest` | ✅ |
 | SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
 | SEC-7 | No sensitive fields in responses | `UserResource` / `StaffResource` explicit field lists | Auth tests assert no password/token leakage | 🟡 |
 | SEC-8 | CORS allowlist + security headers | `backend/config/cors.php`, `SecurityHeaders.php`, `frontend/next.config.ts` | `tests/Feature/HealthTest.php` | 🟡 |
@@ -277,4 +277,38 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - Order confirmation/My Orders pages and Stripe Elements belong to P9/P10; this phase delivers the APIs.
 
 **Next:** P7 — admin API: dashboard, order management/status updates, coupons CRUD, customers, staff profile.
+
+## P7 report
+
+**Done**
+
+- `GET /admin/dashboard` (`reports.view`) returns today's order count and captured revenue, total customers, active low-stock count, a fixed 30-day sales series (zero-filled for days without paid orders) and the five most recent orders. All figures are aggregated server-side; `DashboardService` uses `DATE(paid_at)` so the same query runs on SQLite and MySQL.
+- `GET /admin/orders` paginates with status filter and search over order number/customer name/email; `GET /admin/orders/{id}` returns items, payment, status history and server-computed `valid_transitions`. `PATCH /admin/orders/{id}/status` reuses `OrderService::transition` (history row, queued email, cancel side effects) and returns 409 for a transition the table forbids.
+- Admin status updates deliberately exclude `paid` — only the verified Stripe webhook can mark an order paid. Cancelling additionally requires `orders.cancel` on top of `orders.update_status`, so customer-support staff can advance fulfilment without issuing refunds.
+- Coupons have full CRUD under `coupons.manage`. Codes are trimmed/uppercased, percentage values are capped at 100, fixed values are cents, `expires_at` must follow `starts_at`, and soft-deleted coupons disappear from the admin list.
+- `GET /admin/customers` and `GET /admin/customers/{id}` (`customers.view`) list only `type=customer` accounts with order count, paid lifetime spend, last-order date and (on detail) order history. A staff id returns 404; customer tokens are rejected before the controller.
+- `GET/PATCH /admin/profile` let any authenticated staff member read and update only name, phone and email; a changed email clears `email_verified_at`. Password change reuses `POST /admin/auth/change-password` (current password required).
+- `ActivityLogger` records order status changes, coupon create/update/delete and profile updates with actor, subject, properties, IP and user agent. Logging is best-effort (`rescue` + report) so an audit failure never rolls back the business action. `GET /admin/activity-logs` is gated by `roles.manage` (Super Admin) to avoid adding a new permission.
+- Endpoint and permission map:
+
+  | Method | Path | Permission |
+  |--------|------|------------|
+  | GET | `/admin/dashboard` | `reports.view` |
+  | GET | `/admin/activity-logs` | `roles.manage` |
+  | GET | `/admin/profile`, PATCH `/admin/profile` | any staff token |
+  | GET | `/admin/orders`, `/admin/orders/{id}` | `orders.view` |
+  | PATCH | `/admin/orders/{id}/status` | `orders.update_status` (+ `orders.cancel` when cancelling) |
+  | GET/POST | `/admin/coupons`, `/admin/coupons/{id}` etc. | `coupons.manage` |
+  | GET | `/admin/customers`, `/admin/customers/{id}` | `customers.view` |
+
+- 38 admin tests green (180 total / 1011 assertions); Pint clean. The blanket `AdminPermissionTest` asserts guest 401, customer-token 403 and no-permission staff 403 across every protected endpoint.
+
+**Not done / risks**
+
+- Admin UI screens, charts and dark mode are P11; this phase delivers the APIs and their contracts.
+- The activity log is append-only and unbounded; a retention/pruning policy is deferred (P12/P14).
+- `total_spent` sums all paid statuses (paid, processing, shipped, delivered) and excludes refunded/cancelled orders; it is a commercial summary, not an accounting ledger.
+- Coupon `PATCH` expects the full editable representation (code/type/value), matching the FormRequest used by create; the P11 form submits all fields.
+
+**Next:** P8 — frontend foundation: design tokens, layouts, typed API client and BFF auth cookie, middleware guards, shared UI, error pages, security headers.
 

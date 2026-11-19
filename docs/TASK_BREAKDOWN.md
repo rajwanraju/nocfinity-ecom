@@ -173,19 +173,19 @@ DoD: Full flow verified with Stripe test cards (success and decline). — Automa
 
 ## P7: Admin API
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Dashboard stats endpoint (today's orders, revenue, customers, low stock) and 30-day sales series
-- [ ] Orders list (status filter, search) and detail
-- [ ] Order status update endpoint
-- [ ] Coupons CRUD
-- [ ] Customers list and detail with order history
-- [ ] Staff profile update and password change
-- [ ] Activity log (bonus)
-- [ ] Permission tests for every endpoint
+- [x] Dashboard stats endpoint (today's orders, revenue, customers, low stock) and 30-day sales series
+- [x] Orders list (status filter, search) and detail
+- [x] Order status update endpoint
+- [x] Coupons CRUD
+- [x] Customers list and detail with order history
+- [x] Staff profile update and password change
+- [x] Activity log (bonus)
+- [x] Permission tests for every endpoint
 
-DoD: Every admin endpoint is permission-protected and documented.
+DoD: Every admin endpoint is permission-protected and documented. — 38 admin tests green (180 total / 1011 assertions), Pint clean. The endpoint/permission table lives in `PROGRESS.md` (P7 report). Admin UI screens are P11; this phase delivers the APIs. Dark mode (the other half of the FR-ADMIN-10 bonus) belongs to P11.
 
 ---
 
