@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P7.
+Last updated: P8.
 
 ## Phase status
 
@@ -14,7 +14,7 @@ Last updated: P7.
 | P5 | Cart and coupons | ✅ Done | see `git log --oneline` |
 | P6 | Checkout, payment, orders | ✅ Done (live Stripe check blocked) | see `git log --oneline` |
 | P7 | Admin API | ✅ Done | see `git log --oneline` |
-| P8 | Frontend foundation | ⬜ Not started | — |
+| P8 | Frontend foundation | ✅ Done | see `git log --oneline` |
 | P9 | Storefront pages | ⬜ Not started | — |
 | P10 | Checkout UI and account pages | ⬜ Not started | — |
 | P11 | Admin panel UI | ⬜ Not started | — |
@@ -82,14 +82,14 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-ADMIN-6 | Customers list/detail + order history | `Admin\CustomerController`, `CustomerResource` (customers only; `customers.view`) | `Admin\AdminCustomerTest` | ✅ |
 | FR-ADMIN-7 | Roles matrix + staff management | RBAC APIs from P3 (`admin/permissions`, `admin/roles`, `admin/staff`) | `Rbac\*` feature tests | 🟡 |
 | FR-ADMIN-8 | Profile + change password | `Admin\ProfileController`, `UpdateProfileRequest`; password via `admin/auth/change-password` | `Admin\AdminProfileTest` | ✅ |
-| FR-ADMIN-9 | Responsive admin UI, states, toasts, dialogs | — | — | ⬜ |
+| FR-ADMIN-9 | Responsive admin UI, states, toasts, dialogs | `admin/(dashboard)/layout.tsx`, `AdminSidebar`, `Toaster`, `Modal`, `Skeleton`; screens are P11 | `components/layout/layout.test.tsx` permission-filtered menu | 🟡 |
 | FR-ADMIN-10 | Dark mode + activity log (bonus) | activity log: `ActivityLogger`, `Admin\ActivityLogController` (`roles.manage`); dark mode is P11 | `Admin\ActivityLogTest` | 🟡 |
-| FR-UI-1 | All storefront pages | — | — | ⬜ |
+| FR-UI-1 | All storefront pages | Storefront shell, home/login/account placeholders from `ui/` design; pages are P9/P10 | `scripts/smoke-auth.ps1`, `LoginForm` tests | 🟡 |
 | FR-UI-2 | Matches Figma 1440/390 | — | — | ⬜ |
 | FR-UI-3 | Consistent visual language on undesigned screens | — | — | ⬜ |
 | FR-UI-4 | SEO + SSR product pages | — | — | ⬜ |
 | FR-UI-5 | Accessibility | — | — | ⬜ |
-| FR-UI-6 | Skeletons, error boundaries, empty states | — | — | ⬜ |
+| FR-UI-6 | Skeletons, error boundaries, empty states | `Skeleton`, `Pagination`, `error.tsx`, `not-found.tsx`, `global-error.tsx`, Suspense fallbacks | `components/ui/ui.test.tsx` | 🟡 |
 | FR-API-1 | `/api/v1` REST | `backend/bootstrap/app.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-2 | Response envelope | `backend/app/Support/ApiResponse.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-3 | Correct status codes | `backend/app/Exceptions/ApiExceptionHandler.php` | `tests/Feature/HealthTest.php` (404) | 🟡 |
@@ -104,12 +104,12 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | SEC-6 | Mass assignment protection | `$fillable` on every model; privileged user fields excluded (`app/Models/User.php`) | `MassAssignmentTest` | ✅ |
 | SEC-7 | No sensitive fields in responses | `UserResource` / `StaffResource` explicit field lists | Auth tests assert no password/token leakage | 🟡 |
 | SEC-8 | CORS allowlist + security headers | `backend/config/cors.php`, `SecurityHeaders.php`, `frontend/next.config.ts` | `tests/Feature/HealthTest.php` | 🟡 |
-| SEC-9 | CSRF posture (SameSite + origin checks) | — | — | ⬜ |
+| SEC-9 | CSRF posture (SameSite + origin checks) | BFF session cookies (`SameSite=Lax`, httpOnly, Secure when configured) + `Origin` allowlist in `src/lib/auth/handlers.ts` | `handlers.test.ts` origin/retry tests; live smoke 403 for cross-origin login | ✅ |
 | SEC-10 | Rate limits | named limiters in `AppServiceProvider`; login throttle in `AuthService`; `throttle:coupon`, `throttle:checkout` | `LoginThrottleTest` (429 + Retry-After), `Cart\CouponTest`, checkout limiter | 🟡 |
 | SEC-11 | Secure uploads/secrets | `.env.example`, `.gitignore` | review | 🟡 |
 | SEC-12 | Stripe signature verification | `StripeSdkGateway::verifyWebhook` called before JSON parsing in `WebhookController` | `Orders\WebhookSignatureTest`; `Orders\WebhookTest` invalid signature | ✅ |
 | SEC-13 | Dependency audits | — | — | ⬜ |
-| SEC-14 | Validation both sides | Server: FormRequests for every write + query filters | Catalog/RBAC validation tests; frontend schemas from P8 | 🟡 |
+| SEC-14 | Validation both sides | Server: FormRequests for every write + query filters. Client: Zod in BFF handlers and `LoginForm` field checks | Catalog/RBAC validation tests; `handlers.test.ts` login schema | 🟡 |
 | NFR-DB-1 | FKs and unique constraints | `database/migrations/*` | `SchemaTest` + `migrate:fresh --seed` | ✅ |
 | NFR-DB-2 | Indexes and soft deletes | `database/migrations/*` (status/created_at/category/search indexes, soft deletes) | `SchemaTest` | ✅ |
 | NFR-DB-3 | Eager loading | Catalog queries eager-load category/images; staff loads roles/permissions | Catalog + RBAC tests | ✅ |
@@ -311,4 +311,29 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 - Coupon `PATCH` expects the full editable representation (code/type/value), matching the FormRequest used by create; the P11 form submits all fields.
 
 **Next:** P8 — frontend foundation: design tokens, layouts, typed API client and BFF auth cookie, middleware guards, shared UI, error pages, security headers.
+
+## P8 report
+
+**Done**
+
+- Design tokens come from the supplied `ui/` storefront template (there is no Figma file): black/white neutrals, `shop-*` surface/line/muted tokens, display headings (uppercase, tight tracking), the 77.5rem container and 18px card radius. Public images (`shop-hero.png`, product shots, icons) were copied into `frontend/public`.
+- Storefront shell: promo strip, responsive header with GET search, nav, cart badge and account slot; footer with link groups, socials and payment badges. The account slot is a server component wrapped in `Suspense`, so the rest of the shell stays prerenderable with Cache Components. Home, login and account placeholder pages use the template's visual language; P9/P10 replace the bodies.
+- Admin shell: responsive sidebar (horizontal on mobile) with permission-filtered navigation via `hasPermission`/`filterByPermission`, staff name/role, sign-out, and a Suspense-streamed session read. `/admin` renders the signed-in summary; `/admin/login` is a standalone centred card.
+- Typed API client (`src/lib/api/server.ts`): envelope `{success,message,data,meta,errors}`, query serialisation, bearer + `X-Cart-Token` headers, 204 handling, non-JSON fallback and `ApiError` carrying status, field errors and `Retry-After`.
+- BFF auth (`src/lib/auth/handlers.ts`, `src/app/api/**`): customer/staff login, me and logout. Login validates with Zod, forwards API errors, stores the token in an httpOnly/SameSite=Lax cookie (`Secure` when `COOKIE_SECURE=true`), and never returns the token to the browser. `me` clears stale cookies; logout clears locally even if the API call fails. State-changing calls require a same-origin `Origin`.
+- Route guards (`src/proxy.ts`, Next 16 proxy): guests are redirected from `/account`, `/checkout` and `/admin` (with a safe `next` path), customer cookies never satisfy staff guards, login pages stay public, and the matcher skips API/static assets.
+- Per-request CSP with a nonce and `strict-dynamic` is attached in the proxy; `next.config.ts` keeps nosniff, DENY framing, referrer, permissions and COOP headers, adds HSTS only in production, and allows backend images from ports 8000/8001.
+- Shared UI: `Input`, `Modal` (base-ui dialog), `Toaster` (sonner), `Skeleton`, `Pagination`, `Table`, plus the existing `Button`. Error boundary, global error and themed 404 pages. Root metadata, icons and viewport are set.
+- Vitest + Testing Library tooling (`vitest.config.mts`, jsdom, `server-only` stub, `server` alias test setup) with 46 tests over the client, BFF handlers, cookies, CSP, proxy guards, permissions, shared UI, layouts and the login form.
+- Verification: `npm test` 46/46, `npm run typecheck`, `npm run lint`, `npm run format:check` and `npm run build` all clean. `scripts/smoke-auth.ps1` ran against the real Laravel API and production build: customer and staff login set httpOnly cookies, `/me` returns the session user (Super Admin: 13 permissions), login bodies contain no token, `/account` renders without a bearer token, cross-origin login returns 403, and guest `/admin` redirects to `/admin/login?next=%2Fadmin`.
+
+**Not done / risks**
+
+- P8 provides shells and placeholders, not the storefront/admin screens: products, cart, checkout, orders and admin CRUD are P9–P11. The admin sidebar links to those routes before they exist.
+- Cart badge is wired to a `cartCount` prop (currently 0); P9 reads the live cart. The account page shows profile data only until P10 adds order history and edit forms.
+- `server-only` is aliased to an empty stub in Vitest; the real guard still applies in the Next.js build, and the production build passed.
+- The frontend currently runs on Next 16 with Cache Components; session-dependent UI is deliberately behind Suspense. Any future session read in a page/layout must follow the same pattern or the build fails.
+- The smoke script needs the API on `127.0.0.1:8001` and accepts `SHOP_URL` (default `http://localhost:3000`); it is not part of `npm test` because it requires the backend and MySQL.
+
+**Next:** P9 — storefront pages: home, listing with filters/sort/pagination, product detail, cart and mobile behavior.
 

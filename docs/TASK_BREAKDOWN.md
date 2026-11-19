@@ -191,16 +191,16 @@ DoD: Every admin endpoint is permission-protected and documented. — 38 admin t
 
 ## P8: Frontend Foundation
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Extract design tokens (colors, typography, spacing) from Figma
-- [ ] Storefront and admin layouts
-- [ ] Typed API client and BFF auth with httpOnly cookie
-- [ ] Route guards via Next.js middleware
-- [ ] Shared UI components: Button, Input, Modal, Toast, Skeleton, Pagination, Table
-- [ ] Error and 404 pages
-- [ ] Security headers in `next.config`
+- [x] Extract design tokens (colors, typography, spacing) from Figma (no Figma file supplied; tokens taken from the `ui/` template — DECISIONS P8-1)
+- [x] Storefront and admin layouts
+- [x] Typed API client and BFF auth with httpOnly cookie
+- [x] Route guards via Next.js middleware (Next 16 `proxy.ts` — DECISIONS P8-2)
+- [x] Shared UI components: Button, Input, Modal, Toast, Skeleton, Pagination, Table
+- [x] Error and 404 pages
+- [x] Security headers in `next.config` (plus per-request nonce CSP in `proxy.ts`)
 
 DoD: Login works via cookie. Token is not accessible from client JavaScript.
 
