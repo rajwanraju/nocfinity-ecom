@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: P8.
+Last updated: P9.
 
 ## Phase status
 
@@ -15,7 +15,7 @@ Last updated: P8.
 | P6 | Checkout, payment, orders | ✅ Done (live Stripe check blocked) | see `git log --oneline` |
 | P7 | Admin API | ✅ Done | see `git log --oneline` |
 | P8 | Frontend foundation | ✅ Done | see `git log --oneline` |
-| P9 | Storefront pages | ⬜ Not started | — |
+| P9 | Storefront pages | ✅ Done | see `git log --oneline` |
 | P10 | Checkout UI and account pages | ⬜ Not started | — |
 | P11 | Admin panel UI | ⬜ Not started | — |
 | P12 | Security hardening | ⬜ Not started | — |
@@ -84,12 +84,12 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 | FR-ADMIN-8 | Profile + change password | `Admin\ProfileController`, `UpdateProfileRequest`; password via `admin/auth/change-password` | `Admin\AdminProfileTest` | ✅ |
 | FR-ADMIN-9 | Responsive admin UI, states, toasts, dialogs | `admin/(dashboard)/layout.tsx`, `AdminSidebar`, `Toaster`, `Modal`, `Skeleton`; screens are P11 | `components/layout/layout.test.tsx` permission-filtered menu | 🟡 |
 | FR-ADMIN-10 | Dark mode + activity log (bonus) | activity log: `ActivityLogger`, `Admin\ActivityLogController` (`roles.manage`); dark mode is P11 | `Admin\ActivityLogTest` | 🟡 |
-| FR-UI-1 | All storefront pages | Storefront shell, home/login/account placeholders from `ui/` design; pages are P9/P10 | `scripts/smoke-auth.ps1`, `LoginForm` tests | 🟡 |
-| FR-UI-2 | Matches Figma 1440/390 | — | — | ⬜ |
-| FR-UI-3 | Consistent visual language on undesigned screens | — | — | ⬜ |
-| FR-UI-4 | SEO + SSR product pages | — | — | ⬜ |
-| FR-UI-5 | Accessibility | — | — | ⬜ |
-| FR-UI-6 | Skeletons, error boundaries, empty states | `Skeleton`, `Pagination`, `error.tsx`, `not-found.tsx`, `global-error.tsx`, Suspense fallbacks | `components/ui/ui.test.tsx` | 🟡 |
+| FR-UI-1 | All storefront pages | Home, listing, product detail and cart in `(storefront)/`; auth/account from P8; checkout/orders are P10 | `catalog.test.ts`, `cart-view.test.tsx`, `storefront-components.test.tsx` | 🟡 |
+| FR-UI-2 | Matches Figma 1440/390 | No Figma supplied — `ui/` template is the reference (DECISIONS P8-1); pages use responsive `sm/lg` breakpoints for 1440 and 390 | visual review only, no side-by-side comparison | 🟡 |
+| FR-UI-3 | Consistent visual language on undesigned screens | Shared `shop-*` tokens, `shop-display`, card radii and `Button`/`Input` used by every storefront page | component tests + build | 🟡 |
+| FR-UI-4 | SEO + SSR product pages | Per-page `metadata`, server-rendered listing/detail with Suspense, Product JSON-LD on detail | Next build route table (`◐`/`ƒ`), `products/[slug]/page.tsx` | ✅ |
+| FR-UI-5 | Accessibility | Semantic landmarks (`header`/`nav`/`main`), labelled filters and qty controls, image alt text, `aria-pressed` gallery, `aria-live` counts, skip-to-content link, focus-visible styles | component tests query by role/label; no formal audit yet | 🟡 |
+| FR-UI-6 | Skeletons, error boundaries, empty states | `ProductGridSkeleton`, page-level Suspense skeletons, storefront `error.tsx`/`not-found.tsx`, empty cart, no-results listing, catalogue-unavailable fallbacks | `ui.test.tsx`, `cart-view.test.tsx` | ✅ |
 | FR-API-1 | `/api/v1` REST | `backend/bootstrap/app.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-2 | Response envelope | `backend/app/Support/ApiResponse.php` | `tests/Feature/HealthTest.php` | 🟡 |
 | FR-API-3 | Correct status codes | `backend/app/Exceptions/ApiExceptionHandler.php` | `tests/Feature/HealthTest.php` (404) | 🟡 |
@@ -337,3 +337,33 @@ Status: ✅ implemented & tested · 🟡 partial · ⬜ planned. Files/tests are
 
 **Next:** P9 — storefront pages: home, listing with filters/sort/pagination, product detail, cart and mobile behavior.
 
+
+## P9 report
+
+**Done**
+
+- Home (`/`): display hero with stats and the local `shop-hero.png`, brand strip, featured category tiles from `GET /categories`, a "New arrivals" grid (newest, 8) and an "Under $100" grid (`max_price=10000`, price ascending), plus a promo panel and testimonials. Catalogue sections stream behind Suspense; a backend failure renders a retry panel instead of the error page, and the static hero/brands/footer still render.
+- Listing (`/products`): URL is the only filter state — search, category (flattened subtree select), min/max entered in dollars, an "On sale only" checkbox and sort — submitted as a GET form; pagination links preserve every active filter. Dollars convert to cents at the boundary and invalid/oversized values fall back to defaults. Includes result counts, page position, filter skeleton, no-results state and a catalogue-unavailable retry.
+- Product detail (`/products/[slug]`): breadcrumbs, gallery with thumbnail switching (`aria-pressed`), price and discount badge, stock status, quantity stepper capped by stock, sanitized description, delivery/returns notes, related products, per-product metadata (real name, sanitized description excerpt, OG image) and Product JSON-LD. Unknown or inactive slugs render the themed not-found inside the streamed boundary; because Cache Components sends the prerendered shell first, that response is HTTP 200, so `generateMetadata` returns `robots: noindex` plus a "Product not found" title instead — verified with `curl`.
+- Cart (`/cart`): server-read cart for a guest cookie or customer session, quantity controls bounded by `available_quantity`, remove, coupon apply/remove, server totals (subtotal, discount, delivery, total), API line warnings mapped to human copy, and an empty state.
+- Cart transport: BFF routes `/api/cart*` keep the guest `cart_token` in an httpOnly cookie, validate bodies with Zod, check `Origin` on every mutation and return the whole recalculated cart; the client adopts that response and calls `router.refresh()` so the streamed header badge updates.
+- Header/nav: mobile menu, GET search, live cart badge, and "On Sale" now maps to a real `on_sale` filter added to `ProductIndexRequest`/`ProductService` (with a feature test) instead of being silently ignored. The listing exposes it as a visible filter.
+- Accessibility/SEO: skip-to-content link, semantic landmarks, labelled filters and quantity controls, image alt text from the API, `aria-live` counters, focus-visible styles, and per-page metadata/OpenGraph.
+- Backend: the public product index now accepts `min_price` or `max_price` on its own (previously `max_price` required `min_price`) and the new `on_sale` flag; both covered in `PublicCatalogTest`.
+
+**Verification**
+
+- `npm test` 77/77, `npm run typecheck`, `npm run lint`, `npm run format:check` and `npm run build` clean in `frontend/`.
+- `php artisan test --filter=PublicCatalogTest` green (including the new on-sale and open-ended price-range cases); Pint clean on the touched backend files.
+
+**Not done / risks**
+
+- No Figma file exists, so the `ui/` template remains the visual reference (DECISIONS P8-1); FR-UI-2 cannot be a literal side-by-side comparison.
+- Responsive behaviour (1440/390) is built with `sm`/`lg` utilities but was not compared in a browser this phase, and no formal accessibility audit (axe or keyboard-only pass) was run — semantic markup, labels, alt text and a skip link are in place.
+- The "Go to checkout" button points at `/checkout`, which lands on the themed 404 until P10 adds the page; register/forgot/reset and My Orders pages are also P10.
+- Missing product URLs are soft 404s at the HTTP level (200 with the not-found UI and `noindex`). A hard 404 would mean resolving the product before the shell and losing the streamed detail skeleton, which Cache Components rejects.
+- `on_sale` means "has a discount price below the list price" (the same effective-price rule as sorting); there is no scheduled campaign window.
+- The listing has a fixed page size of 12 and no page-size control (not required by FR-CAT-3).
+- Cart warnings describe the line but do not offer a one-click "remove unavailable lines" action.
+
+**Next:** P10 — checkout UI and account pages: Stripe Elements payment, confirmation, My Orders/detail/cancel, register and password reset.

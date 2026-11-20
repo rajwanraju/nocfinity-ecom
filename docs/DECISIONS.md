@@ -145,3 +145,14 @@ Every assumption and ruling made while building this project. Newest phases appe
 
 
 
+
+## P9 — Storefront pages
+
+| # | Decision | Why | Cost if wrong |
+|---|----------|-----|---------------|
+| P9-1 | Storefront pages are server components that read the API through `apiFetch`/`createCatalogApi` inside `<Suspense>`; only the cart controller, quantity steppers and the gallery are client components. | Cache Components cannot prerender cookie-bound data, and catalogue content must be server-rendered for FR-UI-4. | Any new page that reads session/cart state must keep its Suspense boundary or the build fails. |
+| P9-2 | The listing URL is the single source of truth for filters; shoppers type dollars in the query string while the API always receives integer cents, and invalid or oversized values fall back to defaults. | FR-CAT-3 needs shareable, bookmarkable filters and one unit per boundary; the URL survives reloads and back/forward. | A link with `sort=popular` silently shows newest rather than reporting an error. |
+| P9-3 | Cart mutations go through the BFF routes under `/api/cart*`; the guest `cart_token` stays httpOnly and every mutation returns the full recalculated cart, which the client adopts before `router.refresh()`. | The backend owns money (SEC-1) and the token must stay out of JavaScript (P8-3); returning the whole cart avoids a second totals implementation in the browser. | The header badge can lag one refresh behind the line items until the RSC payload lands. |
+| P9-4 | `on_sale=1` was added to the public product index (`discount_price IS NOT NULL AND discount_price < price`) and exposed as a listing checkbox, instead of leaving the header's sale link to be ignored by the API. | The shell already advertises an "On Sale" destination and the seeded catalogue has discounted products; a nav link that silently returns everything is a defect. | "On sale" means "has a discount price", not a scheduled campaign window; dated promotions need a later field. |
+| P9-5 | Product descriptions are rendered as plain text with preserved line breaks, not as HTML. | Descriptions are sanitized on write, but rendering raw HTML would make the storefront depend on the allowlist staying correct forever. | Rich formatting (bold, lists) written by admins is flattened on the detail page. |
+| P9-6 | Listing prices are sent as `min_price`/`max_price` independently; the FormRequest only requires `gte:min_price` when both are present. | The UI exposes min and max as separate optional fields, and the previous rule rejected a max-only range, which broke the "Under $100" links. | A max-only request is no longer rejected; the service applies whichever bound exists. |

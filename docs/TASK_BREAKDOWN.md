@@ -208,17 +208,17 @@ DoD: Login works via cookie. Token is not accessible from client JavaScript.
 
 ## P9: Storefront Pages
 
-Status: ⬜
+Status: ✅
 
 Steps:
-- [ ] Home: hero, featured categories, product grids, promo sections
-- [ ] Listing: filters UI, search, sort, pagination, URL query sync
-- [ ] Product detail: gallery, info, stock status, add to cart, related products
-- [ ] Cart: quantity controls, remove, order summary, coupon field
-- [ ] Mobile (390px) responsive behavior
-- [ ] SEO metadata, loading skeletons, empty and error states
+- [x] Home: hero, featured categories, product grids, promo sections
+- [x] Listing: filters UI (search, category, price, on sale), sort, pagination, URL query sync
+- [x] Product detail: gallery, info, stock status, add to cart, related products
+- [x] Cart: quantity controls, remove, order summary, coupon field
+- [x] Mobile (390px) responsive behavior
+- [x] SEO metadata, loading skeletons, empty and error states
 
-DoD: Side-by-side comparison with Figma is acceptable. Accessibility check done.
+DoD: Side-by-side comparison with Figma is acceptable. Accessibility check done. — No Figma file exists; the `ui/` template is the reference (DECISIONS P8-1). Accessibility is semantic markup, labels, alt text, skip link and focus styles, but no formal audit was run; 390px was not compared in a browser. See the P9 report in `PROGRESS.md`.
 
 ---
 
