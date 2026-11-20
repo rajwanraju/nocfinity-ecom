@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
+    // Next 16 blocks private/local IPs by default (SSRF hardening). The local
+    // Laravel asset host is only used outside production, so keep the default
+    // protection in production builds.
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production",
     remotePatterns: [
       {
         protocol: "http",

@@ -79,6 +79,30 @@ it('filters by effective price range', function (): void {
         ->toEqualCanonicalizing(['Budget', 'Mid']);
 });
 
+it('accepts an open-ended price range', function (): void {
+    $category = Category::factory()->create();
+
+    Product::factory()->create(['category_id' => $category->id, 'name' => 'Budget', 'price' => 2500]);
+    Product::factory()->create(['category_id' => $category->id, 'name' => 'Luxury', 'price' => 25000]);
+
+    $maxOnly = $this->getJson('/api/v1/products?max_price=10000')->assertOk();
+    expect(collect($maxOnly->json('data'))->pluck('name')->all())->toBe(['Budget']);
+
+    $minOnly = $this->getJson('/api/v1/products?min_price=10000')->assertOk();
+    expect(collect($minOnly->json('data'))->pluck('name')->all())->toBe(['Luxury']);
+});
+
+it('filters products that are on sale', function (): void {
+    $category = Category::factory()->create();
+
+    Product::factory()->create(['category_id' => $category->id, 'name' => 'Reduced', 'price' => 5000, 'discount_price' => 4000]);
+    Product::factory()->create(['category_id' => $category->id, 'name' => 'Full Price', 'price' => 5000]);
+
+    $response = $this->getJson('/api/v1/products?on_sale=1')->assertOk();
+
+    expect(collect($response->json('data'))->pluck('name')->all())->toBe(['Reduced']);
+});
+
 it('sorts by effective price and newest', function (): void {
     $category = Category::factory()->create();
 

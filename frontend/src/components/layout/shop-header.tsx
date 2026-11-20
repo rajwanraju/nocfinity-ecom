@@ -13,13 +13,15 @@ const navigation = [
 ];
 
 type ShopHeaderProps = {
-  /** Cart quantity badge; P9 wires this to the live cart. */
+  /** Cart quantity badge; used when no server-rendered slot is supplied. */
   cartCount?: number;
+  /** Server-rendered cart indicator, streamed behind Suspense by the layout. */
+  cart?: ReactNode;
   /** Server-rendered account menu, streamed behind Suspense by the layout. */
   account?: ReactNode;
 };
 
-export function ShopHeader({ cartCount = 0, account }: ShopHeaderProps) {
+export function ShopHeader({ cartCount = 0, cart, account }: ShopHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -77,7 +79,7 @@ export function ShopHeader({ cartCount = 0, account }: ShopHeaderProps) {
               <Input
                 aria-label="Search for products"
                 className="h-11 rounded-full border-0 bg-shop-tile pr-4 pl-11"
-                name="q"
+                name="search"
                 placeholder="Search for products..."
                 type="search"
               />
@@ -85,18 +87,20 @@ export function ShopHeader({ cartCount = 0, account }: ShopHeaderProps) {
           </form>
 
           <div className="ml-auto flex items-center gap-1.5 lg:ml-0">
-            <Link
-              aria-label={`Shopping bag, ${cartCount} items`}
-              className="relative grid size-9 place-items-center rounded-full transition hover:bg-shop-surface"
-              href="/cart"
-            >
-              <ShoppingBag aria-hidden="true" size={21} />
-              {cartCount > 0 ? (
-                <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-shop-ink px-1 text-[9px] leading-4 font-semibold text-background">
-                  {cartCount}
-                </span>
-              ) : null}
-            </Link>
+            {cart ?? (
+              <Link
+                aria-label={`Shopping bag, ${cartCount} items`}
+                className="relative grid size-9 place-items-center rounded-full transition hover:bg-shop-surface"
+                href="/cart"
+              >
+                <ShoppingBag aria-hidden="true" size={21} />
+                {cartCount > 0 ? (
+                  <span className="absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-shop-ink px-1 text-[9px] leading-4 font-semibold text-background">
+                    {cartCount}
+                  </span>
+                ) : null}
+              </Link>
+            )}
 
             {account ?? (
               <Link

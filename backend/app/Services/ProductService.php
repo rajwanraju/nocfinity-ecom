@@ -21,7 +21,7 @@ class ProductService
 
     /**
      * FR-CAT-3: public list with search, category subtree, effective-price
-     * range, sorting and pagination.
+     * range, on-sale filter, sorting and pagination.
      *
      * @param  array<string, mixed>  $filters
      */
@@ -37,6 +37,10 @@ class ProductService
         }
 
         $this->applyPriceRange($query, $filters);
+
+        if (filter_var($filters['on_sale'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+            $query->whereNotNull('discount_price')->whereRaw('discount_price < price');
+        }
 
         $this->applySort($query, $filters['sort'] ?? 'newest');
 
