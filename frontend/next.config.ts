@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
+    // Docker Compose serves the API on a host-published URL the optimizer
+    // cannot reach from inside the container; the flag serves originals instead.
+    unoptimized: process.env.NEXT_IMAGE_UNOPTIMIZED === "true",
     // Next 16 blocks private/local IPs by default (SSRF hardening). The local
     // Laravel asset host is only used outside production, so keep the default
     // protection in production builds.

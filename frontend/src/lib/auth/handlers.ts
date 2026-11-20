@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import type { ApiEnvelope, ApiRequestOptions } from "@/lib/api/server";
 import { apiFetch, ApiError } from "@/lib/api/server";
+import { readCartToken } from "@/lib/cart/cookies";
 import { clearedSessionCookie, readSessionToken, sessionCookie, type SessionKind } from "./cookies";
 
 export type AuthUser = {
@@ -40,6 +41,41 @@ const loginSchema = z.object({
     .email("Enter a valid email address."),
   password: z.string().min(1, "Enter your password."),
 });
+
+const email = z
+  .string()
+  .trim()
+  .min(1, "Enter your email address.")
+  .email("Enter a valid email address.");
+
+const password = z.string().min(10, "Use at least 10 characters.");
+
+const registerSchema = z
+  .object({
+    name: z.string().trim().min(2, "Enter your full name.").max(255),
+    email,
+    phone: z.string().trim().max(30).optional(),
+    password,
+    password_confirmation: z.string().min(1, "Confirm your password."),
+  })
+  .refine((value) => value.password === value.password_confirmation, {
+    message: "Passwords do not match.",
+    path: ["password_confirmation"],
+  });
+
+const forgotPasswordSchema = z.object({ email });
+
+const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "This reset link is invalid."),
+    email,
+    password,
+    password_confirmation: z.string().min(1, "Confirm your password."),
+  })
+  .refine((value) => value.password === value.password_confirmation, {
+    message: "Passwords do not match.",
+    path: ["password_confirmation"],
+  });
 
 const ROUTES: Record<SessionKind, { login: string; me: string; logout: string }> = {
   customer: { login: "/auth/login", me: "/auth/me", logout: "/auth/logout" },
@@ -160,6 +196,8 @@ export function createLoginHandler(kind: SessionKind, deps: AuthHandlerDeps = {}
       const result = await call<LoginPayload>(ROUTES[kind].login, {
         method: "POST",
         body: parsed.data,
+        // FR-CART-5: the backend merges the guest cart into the user cart.
+        cartToken: readCartToken(request.headers.get("cookie")),
       });
 
       if (!result.data?.token) {
@@ -171,6 +209,133 @@ export function createLoginHandler(kind: SessionKind, deps: AuthHandlerDeps = {}
         200,
         { "set-cookie": sessionCookie(kind, result.data.token) },
       );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return apiErrorResponse(error);
+      }
+
+      return failure("The authentication service is unavailable.", 503);
+    }
+  };
+}
+
+export function createRegisterHandler(deps: AuthHandlerDeps = {}) {
+  const call = deps.api ?? apiFetch;
+
+  return async function register(request: Request): Promise<Response> {
+    if (!isSameOrigin(request, deps.siteUrl)) {
+      return failure("Request origin is not allowed.", 403);
+    }
+
+    let payload: unknown;
+
+    try {
+      payload = await request.json();
+    } catch {
+      return failure("Request body must be valid JSON.", 400);
+    }
+
+    const parsed = registerSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return failure("The given data was invalid.", 422, validationErrors(parsed.error));
+    }
+
+    try {
+      const result = await call<LoginPayload>("/auth/register", {
+        method: "POST",
+        body: parsed.data,
+        // Registration signs the customer in, so their guest cart follows.
+        cartToken: readCartToken(request.headers.get("cookie")),
+      });
+
+      if (!result.data?.token) {
+        return failure("The registration response was invalid.", 502);
+      }
+
+      return jsonResponse(
+        envelope({ user: result.data.user, abilities: result.data.abilities }, result.message),
+        201,
+        { "set-cookie": sessionCookie("customer", result.data.token) },
+      );
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return apiErrorResponse(error);
+      }
+
+      return failure("The authentication service is unavailable.", 503);
+    }
+  };
+}
+
+export function createForgotPasswordHandler(deps: AuthHandlerDeps = {}) {
+  const call = deps.api ?? apiFetch;
+
+  return async function forgotPassword(request: Request): Promise<Response> {
+    if (!isSameOrigin(request, deps.siteUrl)) {
+      return failure("Request origin is not allowed.", 403);
+    }
+
+    let payload: unknown;
+
+    try {
+      payload = await request.json();
+    } catch {
+      return failure("Request body must be valid JSON.", 400);
+    }
+
+    const parsed = forgotPasswordSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return failure("The given data was invalid.", 422, validationErrors(parsed.error));
+    }
+
+    try {
+      const result = await call<null>("/auth/forgot-password", {
+        method: "POST",
+        body: parsed.data,
+      });
+
+      return jsonResponse(envelope(null, result.message));
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return apiErrorResponse(error);
+      }
+
+      return failure("The authentication service is unavailable.", 503);
+    }
+  };
+}
+
+export function createResetPasswordHandler(deps: AuthHandlerDeps = {}) {
+  const call = deps.api ?? apiFetch;
+
+  return async function resetPassword(request: Request): Promise<Response> {
+    if (!isSameOrigin(request, deps.siteUrl)) {
+      return failure("Request origin is not allowed.", 403);
+    }
+
+    let payload: unknown;
+
+    try {
+      payload = await request.json();
+    } catch {
+      return failure("Request body must be valid JSON.", 400);
+    }
+
+    const parsed = resetPasswordSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      return failure("The given data was invalid.", 422, validationErrors(parsed.error));
+    }
+
+    try {
+      const result = await call<null>("/auth/reset-password", {
+        method: "POST",
+        body: parsed.data,
+      });
+
+      return jsonResponse(envelope(null, result.message));
     } catch (error) {
       if (error instanceof ApiError) {
         return apiErrorResponse(error);

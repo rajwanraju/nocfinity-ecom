@@ -7,6 +7,7 @@ beforeEach(() => {
   process.env.ADMIN_AUTH_COOKIE_NAME = "nocfinity_admin_token";
   process.env.NEXT_PUBLIC_SITE_URL = "https://shop.test";
   process.env.API_URL = "http://127.0.0.1:8001/api/v1";
+  delete process.env.API_PUBLIC_ORIGIN;
 });
 
 function request(path: string, cookie?: string): NextRequest {
@@ -65,6 +66,16 @@ describe("proxy route guards", () => {
     expect(csp).toContain("script-src 'self' 'nonce-");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(response.headers.get("x-nonce")).toBeNull();
+  });
+
+  it("uses the public API origin in the CSP when the internal host differs", () => {
+    process.env.API_URL = "http://backend:8000/api/v1";
+    process.env.API_PUBLIC_ORIGIN = "http://localhost:8000";
+
+    const csp = proxy(request("/")).headers.get("content-security-policy");
+
+    expect(csp).toContain("img-src 'self' data: blob: http://localhost:8000");
+    expect(csp).not.toContain("http://backend:8000");
   });
 
   it("excludes API, static assets and images from the matcher", () => {

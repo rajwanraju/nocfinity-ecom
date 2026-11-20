@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch, ApiError } from "@/lib/api/server";
 import { createCatalogApi } from "@/lib/api/catalog";
 import { discountPercent, formatMoney } from "@/lib/format/money";
+import { serializeJsonLd } from "@/lib/security/json-ld";
 import type { Product } from "@/lib/api/types";
 
 type ProductPageProps = { params: Promise<{ slug: string }> };
@@ -220,7 +221,7 @@ function ProductDetailBody({ product }: { product: Product }) {
 
       <script
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: serializeJsonLd({
             "@context": "https://schema.org",
             "@type": "Product",
             name: product.name,

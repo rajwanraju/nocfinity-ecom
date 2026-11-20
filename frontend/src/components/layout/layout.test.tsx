@@ -54,10 +54,11 @@ describe("AdminSidebar", () => {
             "reports.view",
             "orders.view",
             "products.view",
-            "categories.view",
+            "categories.manage",
             "coupons.manage",
             "customers.view",
             "roles.manage",
+            "staff.manage",
           ],
         }}
       />,
@@ -71,7 +72,8 @@ describe("AdminSidebar", () => {
       "Coupons",
       "Customers",
       "Activity log",
-      "Staff & roles",
+      "Staff",
+      "Roles & permissions",
       "Profile",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();

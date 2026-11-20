@@ -27,6 +27,13 @@ class CustomerAuthController
     {
         $result = $this->authService->register($request->validated());
 
+        // Registration signs the customer in, so a guest cart follows them the
+        // same way it does on login (FR-CART-5).
+        $this->cartService->mergeGuestCart(
+            $result['user'],
+            $this->cartService->tokenFromRequest($request),
+        );
+
         return ApiResponse::created(
             $this->authPayload($result),
             'Account created successfully.',

@@ -91,3 +91,54 @@ export type Cart = {
   coupon: CartCoupon | null;
   totals: CartTotals;
 };
+
+export type OrderStatus = "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled";
+
+export type OrderItem = {
+  id: number;
+  product_id: number | null;
+  product_name: string;
+  product_sku: string;
+  unit_price: number;
+  quantity: number;
+  line_total: number;
+  image_url: string | null;
+};
+
+export type OrderShipping = {
+  name: string;
+  phone: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  postal_code: string;
+  country: string;
+};
+
+export type Order = {
+  id: number;
+  order_number: string;
+  status: OrderStatus;
+  subtotal: number;
+  discount_total: number;
+  shipping_total: number;
+  tax_total: number;
+  grand_total: number;
+  coupon_code: string | null;
+  customer_name: string;
+  customer_email: string;
+  shipping: OrderShipping;
+  notes: string | null;
+  placed_at: string | null;
+  paid_at: string | null;
+  cancelled_at: string | null;
+  items?: OrderItem[];
+  payment_status?: string | null;
+  created_at: string | null;
+};
+
+export type OrderCheckoutPayload = {
+  order: Order;
+  payment: { client_secret: string | null };
+};

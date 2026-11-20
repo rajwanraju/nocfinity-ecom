@@ -3,6 +3,7 @@ import { UserRound } from "lucide-react";
 import { filterByPermission, hasPermission } from "@/lib/auth/permissions";
 import type { AuthUser } from "@/lib/auth/handlers";
 import { SignOutButton } from "./sign-out-button";
+import { ThemeToggle } from "@/components/admin/theme-toggle";
 
 type NavItem = { label: string; href: string; permission?: string };
 
@@ -10,11 +11,12 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/admin", permission: "reports.view" },
   { label: "Orders", href: "/admin/orders", permission: "orders.view" },
   { label: "Products", href: "/admin/products", permission: "products.view" },
-  { label: "Categories", href: "/admin/categories", permission: "categories.view" },
+  { label: "Categories", href: "/admin/categories", permission: "categories.manage" },
   { label: "Coupons", href: "/admin/coupons", permission: "coupons.manage" },
   { label: "Customers", href: "/admin/customers", permission: "customers.view" },
   { label: "Activity log", href: "/admin/activity-logs", permission: "roles.manage" },
-  { label: "Staff & roles", href: "/admin/staff", permission: "roles.manage" },
+  { label: "Staff", href: "/admin/staff", permission: "staff.manage" },
+  { label: "Roles & permissions", href: "/admin/roles", permission: "roles.manage" },
   { label: "Profile", href: "/admin/profile" },
 ];
 
@@ -60,6 +62,7 @@ export function AdminSidebar({ user }: { user: AuthUser }) {
           <p className="truncate text-sm font-semibold">{user.name}</p>
           <p className="truncate text-xs text-shop-muted">{user.roles?.join(", ") || "Staff"}</p>
         </div>
+        <ThemeToggle />
         <SignOutButton endpoint="/api/admin/auth/logout" redirectTo="/admin/login" />
       </div>
     </aside>

@@ -14,12 +14,13 @@ export function buildContentSecurityPolicy({ nonce, isDev, apiOrigin }: CspOptio
   const evalSource = isDev ? " 'unsafe-eval'" : "";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${evalSource}`,
+    // Stripe.js must load from its CDN; it loads no further scripts (SEC-12).
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://js.stripe.com${evalSource}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob:${api}`,
     "font-src 'self' data:",
     `connect-src 'self'${api} https://api.stripe.com`,
-    "frame-src https://js.stripe.com https://hooks.stripe.com",
+    "frame-src https://js.stripe.com https://hooks.stripe.com https://m.stripe.network",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

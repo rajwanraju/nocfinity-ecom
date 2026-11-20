@@ -21,4 +21,13 @@ class OrderPolicy
     {
         return $actor->isCustomer() && $order->user_id === $actor->id;
     }
+
+    /**
+     * FR-ORDER-12: a customer may cancel their own order while the transition
+     * table still allows it; refunds and stock restoration are the service's job.
+     */
+    public function cancel(User $actor, Order $order): bool
+    {
+        return $this->view($actor, $order) && $order->status->isCancellable();
+    }
 }

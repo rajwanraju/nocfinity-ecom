@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSessionUser } from "@/lib/auth/server";
@@ -58,6 +59,21 @@ async function AccountDetails() {
           </dd>
         </div>
       </dl>
+
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link
+          className="inline-flex h-11 items-center justify-center rounded-full bg-shop-ink px-6 text-sm font-semibold text-background"
+          href="/account/orders"
+        >
+          My orders
+        </Link>
+        <Link
+          className="inline-flex h-11 items-center justify-center rounded-full border border-shop-line px-6 text-sm font-semibold"
+          href="/products"
+        >
+          Continue shopping
+        </Link>
+      </div>
     </>
   );
 }

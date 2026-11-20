@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,6 +137,17 @@ export function LoginForm({ endpoint, redirectTo, title, description }: LoginFor
           {pending ? "Signing in…" : "Sign in"}
         </Button>
       </form>
+
+      {endpoint === "/api/auth/login" ? (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm text-shop-muted">
+          <Link className="font-semibold text-shop-ink underline" href="/forgot-password">
+            Forgot password?
+          </Link>
+          <Link className="font-semibold text-shop-ink underline" href="/register">
+            Create account
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

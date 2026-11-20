@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSessionUser } from "@/lib/auth/server";
+
+export const metadata: Metadata = {
+  title: { default: "Admin", template: "%s | Nocfinity admin" },
+  robots: { index: false, follow: false },
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (

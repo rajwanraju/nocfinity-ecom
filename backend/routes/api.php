@@ -75,6 +75,10 @@ Route::middleware(['auth:sanctum', 'abilities:customer'])->group(function (): vo
     Route::get('orders/{order}', [OrderController::class, 'show'])
         ->whereNumber('order')
         ->name('api.orders.show');
+
+    Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])
+        ->whereNumber('order')
+        ->name('api.orders.cancel');
 });
 
 /*

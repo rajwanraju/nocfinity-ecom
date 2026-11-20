@@ -38,7 +38,9 @@ function guardFor(pathname: string): Guard | null {
 }
 
 function apiOrigin(): string | null {
-  const value = process.env.API_URL;
+  // API_URL can be an internal host (Docker service name); the CSP still has to
+  // allow the browser-facing origin that serves product images and assets.
+  const value = process.env.API_PUBLIC_ORIGIN ?? process.env.API_URL;
 
   if (!value) {
     return null;

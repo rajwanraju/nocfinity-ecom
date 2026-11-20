@@ -159,6 +159,44 @@ it('requires an authenticated customer for checkout', function (): void {
     expect(Order::query()->count())->toBe(0);
 });
 
+it('scopes an idempotency key to the authenticated customer', function (): void {
+    $product = Product::factory()->create(['price' => 5000, 'stock' => 10]);
+    $first = User::factory()->create();
+    $second = User::factory()->create();
+
+    Sanctum::actingAs($first, ['customer']);
+    $this->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])->assertOk();
+    mockPaymentIntent();
+    $firstOrder = $this->postJson('/api/v1/checkout', checkoutAddress(), ['Idempotency-Key' => 'shared-key'])
+        ->assertCreated();
+
+    forgetAuthGuards();
+
+    Sanctum::actingAs($second, ['customer']);
+    $this->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])->assertOk();
+    mockPaymentIntent('pi_test_456', 'pi_test_456_secret');
+    $secondOrder = $this->postJson('/api/v1/checkout', checkoutAddress(), ['Idempotency-Key' => 'shared-key'])
+        ->assertCreated();
+
+    expect($secondOrder->json('data.order.id'))->not->toBe($firstOrder->json('data.order.id'))
+        ->and(Order::query()->count())->toBe(2)
+        ->and(Order::query()->where('user_id', $second->id)->count())->toBe(1);
+});
+
+it('does not decrement stock before payment succeeds', function (): void {
+    $customer = User::factory()->create();
+    $product = Product::factory()->create(['price' => 5000, 'stock' => 10]);
+
+    Sanctum::actingAs($customer, ['customer']);
+    $this->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 3])->assertOk();
+    mockPaymentIntent();
+
+    $this->postJson('/api/v1/checkout', checkoutAddress())->assertCreated();
+
+    // Stock moves only when the signed webhook confirms payment (FR-ORDER-8).
+    expect($product->fresh()->stock)->toBe(10);
+});
+
 it('rejects staff tokens on the checkout endpoint', function (): void {
     Sanctum::actingAs(User::factory()->staff()->create(), ['staff']);
 

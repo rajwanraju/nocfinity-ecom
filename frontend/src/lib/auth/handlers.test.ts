@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiEnvelope } from "@/lib/api/server";
 import { ApiError } from "@/lib/api/server";
-import { createLoginHandler, createLogoutHandler, createMeHandler } from "./handlers";
+import {
+  createForgotPasswordHandler,
+  createLoginHandler,
+  createLogoutHandler,
+  createMeHandler,
+  createRegisterHandler,
+} from "./handlers";
 
 const user = {
   id: 12,
@@ -228,5 +234,98 @@ describe("me and logout BFF", () => {
     expect(api).toHaveBeenCalledWith("/auth/logout", expect.objectContaining({ method: "POST" }));
     expect(cookieFrom(response)).toContain("Max-Age=0");
     expect(cookieFrom(response)).toContain("HttpOnly");
+  });
+});
+
+describe("guest cart merge", () => {
+  it("forwards the cart token so login can merge the guest cart", async () => {
+    const api = vi
+      .fn()
+      .mockResolvedValue(
+        envelope({ user, token: "secret-token", token_type: "Bearer", abilities: ["customer"] }),
+      );
+    const cartToken = "6f1a4c62-8f0b-4e39-9a45-0f2c1b7d3e11";
+    const request = new Request("https://shop.test/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: "https://shop.test",
+        cookie: `theme=dark; nocfinity_cart=${cartToken}`,
+      },
+      body: JSON.stringify({ email: "ada@example.test", password: "Password123!" }),
+    });
+
+    await createLoginHandler("customer", { api })(request);
+
+    expect(api).toHaveBeenCalledWith("/auth/login", expect.objectContaining({ cartToken }));
+  });
+});
+
+describe("customer registration BFF", () => {
+  function registerRequest(body: unknown): Request {
+    return new Request("https://shop.test/api/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://shop.test" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  const payload = {
+    name: "Ada Customer",
+    email: "ada@example.test",
+    password: "Password123!",
+    password_confirmation: "Password123!",
+  };
+
+  it("signs the customer in with an httpOnly cookie", async () => {
+    const api = vi
+      .fn()
+      .mockResolvedValue(
+        envelope({ user, token: "secret-token", token_type: "Bearer", abilities: ["customer"] }),
+      );
+
+    const response = await createRegisterHandler({ api })(registerRequest(payload));
+    const body = await response.text();
+
+    expect(response.status).toBe(201);
+    expect(body).not.toContain("secret-token");
+    expect(cookieFrom(response)).toContain("nocfinity_token=secret-token");
+    expect(cookieFrom(response)).toContain("HttpOnly");
+    expect(api).toHaveBeenCalledWith("/auth/register", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("rejects mismatched passwords without calling the API", async () => {
+    const api = vi.fn();
+    const response = await createRegisterHandler({ api })(
+      registerRequest({ ...payload, password_confirmation: "Different123!" }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(api).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({
+      errors: { password_confirmation: ["Passwords do not match."] },
+    });
+  });
+});
+
+describe("password reset BFF", () => {
+  it("returns the generic message without revealing whether the email exists", async () => {
+    const api = vi
+      .fn()
+      .mockResolvedValue(
+        envelope(null, "If an account exists for that email, a password reset link has been sent."),
+      );
+    const request = new Request("https://shop.test/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: "https://shop.test" },
+      body: JSON.stringify({ email: "nobody@example.test" }),
+    });
+
+    const response = await createForgotPasswordHandler({ api })(request);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      message: "If an account exists for that email, a password reset link has been sent.",
+    });
   });
 });

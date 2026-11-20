@@ -9,7 +9,9 @@ describe("buildContentSecurityPolicy", () => {
       apiOrigin: "http://127.0.0.1:8001",
     });
 
-    expect(csp).toContain("script-src 'self' 'nonce-abc123' 'strict-dynamic'");
+    expect(csp).toContain(
+      "script-src 'self' 'nonce-abc123' 'strict-dynamic' https://js.stripe.com",
+    );
     expect(csp).not.toContain("'unsafe-eval'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
@@ -17,7 +19,9 @@ describe("buildContentSecurityPolicy", () => {
     expect(csp).toContain("form-action 'self'");
     expect(csp).toContain("connect-src 'self' http://127.0.0.1:8001 https://api.stripe.com");
     expect(csp).toContain("img-src 'self' data: blob: http://127.0.0.1:8001");
-    expect(csp).toContain("frame-src https://js.stripe.com https://hooks.stripe.com");
+    expect(csp).toContain(
+      "frame-src https://js.stripe.com https://hooks.stripe.com https://m.stripe.network",
+    );
     expect(csp).toContain("upgrade-insecure-requests");
   });
 
