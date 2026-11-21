@@ -1,18 +1,14 @@
+
 import { NextResponse, type NextRequest } from "next/server";
 import { sessionCookieName, type SessionKind } from "@/lib/auth/cookies";
 import { buildContentSecurityPolicy } from "@/lib/security/csp";
 
 type Guard = {
-  /** Prefix of the protected area. */
   area: string;
   kind: SessionKind;
   loginPath: string;
 };
 
-/**
- * Optimistic redirect guards only. The backend bearer check remains the
- * authority; a forged cookie reaches the page but every data call fails 401.
- */
 const GUARDS: Guard[] = [
   { area: "/admin", kind: "staff", loginPath: "/admin/login" },
   { area: "/account", kind: "customer", loginPath: "/login" },
@@ -28,61 +24,99 @@ const PUBLIC_PREFIXES = [
 ];
 
 function isPublic(pathname: string): boolean {
-  return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return PUBLIC_PREFIXES.some(
+    (prefix) =>
+      pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
 }
 
 function guardFor(pathname: string): Guard | null {
   return (
-    GUARDS.find((guard) => pathname === guard.area || pathname.startsWith(`${guard.area}/`)) ?? null
+    GUARDS.find(
+      (guard) =>
+        pathname === guard.area ||
+        pathname.startsWith(`${guard.area}/`)
+    ) ?? null
   );
 }
 
 function apiOrigin(): string | null {
-  // API_URL can be an internal host (Docker service name); the CSP still has to
-  // allow the browser-facing origin that serves product images and assets.
-  const value = process.env.API_PUBLIC_ORIGIN ?? process.env.API_URL;
+  const value =
+    process.env.API_PUBLIC_ORIGIN ??
+    process.env.API_URL;
 
-  if (!value) {
-    return null;
-  }
+  if (!value) return null;
 
   try {
-    return new URL(value).origin;
+    const url = new URL(value);
+
+    if (!["http:", "https:"].includes(url.protocol)) {
+      return null;
+    }
+
+    return url.origin;
   } catch {
     return null;
   }
 }
 
+function createNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+
+  return btoa(
+    Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")
+  );
+}
+
 export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
-  const nonce = btoa(crypto.randomUUID());
+
+  const nonce = createNonce();
+
   const csp = buildContentSecurityPolicy({
     nonce,
-    isDev: process.env.NODE_ENV === "development",
+    isDev: process.env.NODE_ENV !== "production",
     apiOrigin: apiOrigin(),
   });
 
   const guard = guardFor(pathname);
 
-  if (guard && !isPublic(pathname) && !request.cookies.get(sessionCookieName(guard.kind))) {
+  // Redirect unauthenticated users from protected routes.
+  if (
+    guard &&
+    !isPublic(pathname) &&
+    !request.cookies.get(sessionCookieName(guard.kind))
+  ) {
     const url = request.nextUrl.clone();
+
     url.pathname = guard.loginPath;
     url.search = "";
     url.searchParams.set("next", `${pathname}${search}`);
 
-    const redirect = NextResponse.redirect(url);
-    redirect.headers.set("content-security-policy", csp);
-    redirect.headers.set("x-content-type-options", "nosniff");
+    const response = NextResponse.redirect(url);
 
-    return redirect;
+    response.headers.set("Content-Security-Policy", csp);
+    response.headers.set("X-Content-Type-Options", "nosniff");
+
+    return response;
   }
 
+  // Forward the nonce and CSP to Next.js.
+  // Next.js uses the nonce when rendering framework scripts.
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
-  requestHeaders.set("content-security-policy", csp);
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("content-security-policy", csp);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+
+  const response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  // Apply CSP to the browser response.
+  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Content-Type-Options", "nosniff");
 
   return response;
 }
