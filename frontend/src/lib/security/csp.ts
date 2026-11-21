@@ -1,3 +1,4 @@
+
 export type CspOptions = {
   nonce: string;
   isDev: boolean;
@@ -5,27 +6,77 @@ export type CspOptions = {
 };
 
 /**
- * P8/P12: strict script CSP with a per-request nonce (Next injects the nonce
- * into its own scripts through the `x-nonce` request header). Inline styles are
- * allowed because Tailwind and base-ui emit style attributes; scripts are not.
+ * Builds a nonce-based Content Security Policy.
+ *
+ * Security:
+ * - Scripts require an authorized nonce or an explicitly trusted source.
+ * - Inline styles are allowed for Tailwind and UI component compatibility.
+ * - API connections are restricted to the configured API origin.
+ * - Stripe resources are explicitly allowlisted.
  */
-export function buildContentSecurityPolicy({ nonce, isDev, apiOrigin }: CspOptions): string {
-  const api = apiOrigin ? ` ${apiOrigin}` : "";
-  const evalSource = isDev ? " 'unsafe-eval'" : "";
+export function buildContentSecurityPolicy({
+  nonce,
+  isDev,
+  apiOrigin,
+}: CspOptions): string {
+  const apiSources = apiOrigin ? ` ${apiOrigin}` : "";
+
   const directives = [
+    // Default policy
     "default-src 'self'",
-    // Stripe.js must load from its CDN; it loads no further scripts (SEC-12).
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://js.stripe.com${evalSource}`,
+
+    // Scripts: nonce-based execution and explicitly trusted Stripe CDN.
+    // strict-dynamic is intentionally omitted so host allowlisting works.
+    [
+      "script-src",
+      "'self'",
+      `'nonce-${nonce}'`,
+      "https://js.stripe.com",
+      ...(isDev ? ["'unsafe-eval'"] : []),
+    ].join(" "),
+
+    // Styles
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob:${api}`,
+
+    // Images, including Laravel-hosted storage assets
+    `img-src 'self' data: blob:${apiSources}`,
+
+    // Fonts
     "font-src 'self' data:",
-    `connect-src 'self'${api} https://api.stripe.com`,
-    "frame-src https://js.stripe.com https://hooks.stripe.com https://m.stripe.network",
+
+    // API requests and Stripe connections
+    [
+      "connect-src",
+      "'self'",
+      apiSources.trim(),
+      "https://api.stripe.com",
+      "https://m.stripe.network",
+    ]
+      .filter(Boolean)
+      .join(" "),
+
+    // Stripe payment frames
+    [
+      "frame-src",
+      "https://js.stripe.com",
+      "https://hooks.stripe.com",
+      "https://m.stripe.network",
+    ].join(" "),
+
+    // Restrict embedded objects
     "object-src 'none'",
+
+    // Restrict base URL
     "base-uri 'self'",
+
+    // Restrict form submissions
     "form-action 'self'",
+
+    // Prevent this application from being embedded
     "frame-ancestors 'none'",
-    ...(isDev ? [] : ["upgrade-insecure-requests"]),
+
+    // Upgrade insecure requests in production
+    ...(!isDev ? ["upgrade-insecure-requests"] : []),
   ];
 
   return directives.join("; ");
