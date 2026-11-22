@@ -2,18 +2,22 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginForm } from "./login-form";
 
-const replace = vi.fn();
-const refresh = vi.fn();
+const navigateTo = vi.hoisted(() => vi.fn());
+const setFlash = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({ next: "/admin/orders?status=paid" }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace, refresh, push: vi.fn() }),
   useSearchParams: () => new URLSearchParams({ next: state.next }),
 }));
 
+// Sign-in leaves the client router behind, so the destination is loaded from
+// the server and the success message survives the document change.
+vi.mock("@/lib/ui/navigation", () => ({ navigateTo }));
+vi.mock("@/lib/ui/flash", () => ({ setFlash }));
+
 beforeEach(() => {
-  replace.mockReset();
-  refresh.mockReset();
+  navigateTo.mockReset();
+  setFlash.mockReset();
   state.next = "/admin/orders?status=paid";
 });
 
@@ -40,8 +44,8 @@ describe("LoginForm", () => {
     );
     submit();
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/orders?status=paid"));
-    expect(refresh).toHaveBeenCalled();
+    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith("/admin/orders?status=paid"));
+    expect(setFlash).toHaveBeenCalledWith("Signed in successfully.");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/admin/auth/login",
       expect.objectContaining({
@@ -73,7 +77,7 @@ describe("LoginForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid credentials.");
     expect(screen.getByText("These credentials do not match our records.")).toBeInTheDocument();
-    expect(replace).not.toHaveBeenCalled();
+    expect(navigateTo).not.toHaveBeenCalled();
 
     vi.unstubAllGlobals();
   });
@@ -105,7 +109,7 @@ describe("LoginForm", () => {
     render(<LoginForm endpoint="/api/auth/login" redirectTo="/account" title="Sign in" />);
     submit("ada@example.test", "Password123!");
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/account"));
+    await waitFor(() => expect(navigateTo).toHaveBeenCalledWith("/account"));
 
     vi.unstubAllGlobals();
   });

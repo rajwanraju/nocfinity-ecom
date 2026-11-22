@@ -1,12 +1,14 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ApiEnvelope } from "@/lib/api/server";
 import { safeNextPath } from "@/lib/auth/redirect";
+import { setFlash } from "@/lib/ui/flash";
+import { navigateTo } from "@/lib/ui/navigation";
 
 type LoginFormProps = {
   endpoint: "/api/auth/login" | "/api/admin/auth/login";
@@ -18,7 +20,6 @@ type LoginFormProps = {
 type FieldErrors = Record<string, string[]>;
 
 export function LoginForm({ endpoint, redirectTo, title, description }: LoginFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -63,8 +64,12 @@ export function LoginForm({ endpoint, redirectTo, title, description }: LoginFor
         return;
       }
 
-      router.replace(safeNextPath(searchParams.get("next"), redirectTo));
-      router.refresh();
+      setFlash("Signed in successfully.");
+
+      // Full navigation: the client router caches the redirect the proxy
+      // returned for this destination while the visitor was signed out, so a
+      // client-side replace replays it and leaves them on /login.
+      navigateTo(safeNextPath(searchParams.get("next"), redirectTo));
     } catch {
       setMessage("The authentication service is unavailable. Please try again.");
     } finally {

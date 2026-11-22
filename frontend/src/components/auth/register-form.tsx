@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ApiEnvelope } from "@/lib/api/server";
 import { safeNextPath } from "@/lib/auth/redirect";
+import { setFlash } from "@/lib/ui/flash";
+import { navigateTo } from "@/lib/ui/navigation";
 
 type FieldErrors = Record<string, string[]>;
 
@@ -37,7 +39,6 @@ const fields = [
 ] as const;
 
 export function RegisterForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [values, setValues] = useState<Record<string, string>>({
     name: "",
@@ -103,8 +104,11 @@ export function RegisterForm() {
         return;
       }
 
-      router.replace(safeNextPath(searchParams.get("next"), "/account"));
-      router.refresh();
+      setFlash("Account created. Welcome to Nocfinity.");
+
+      // See LoginForm: after an auth change the next page must be loaded from
+      // the server, not from the client router cache.
+      navigateTo(safeNextPath(searchParams.get("next"), "/account"));
     } catch {
       setMessage("The authentication service is unavailable. Please try again.");
     } finally {

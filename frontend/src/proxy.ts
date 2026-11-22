@@ -113,7 +113,13 @@ export function proxy(request: NextRequest): NextResponse {
     url.search = "";
     url.searchParams.set("next", `${pathname}${search}`);
 
-    return applyCsp(NextResponse.redirect(url), secure);
+    // An auth redirect must never be cached: a stale copy replayed after sign
+    // in would send the visitor straight back to the login page.
+    const redirect = NextResponse.redirect(url, {
+      headers: { "cache-control": "no-store" },
+    });
+
+    return applyCsp(redirect, secure);
   }
 
   // Next.js does not consume the CSP from the request side (no nonce is issued),
