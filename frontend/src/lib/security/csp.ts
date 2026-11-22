@@ -1,83 +1,82 @@
-
 export type CspOptions = {
-  nonce: string;
   isDev: boolean;
   apiOrigin: string | null;
+  /** True when the app is served over HTTPS. Defaults to the inverse of `isDev`. */
+  secure?: boolean;
 };
 
 /**
- * Builds a nonce-based Content Security Policy.
+ * Content Security Policy for the storefront.
  *
- * Security:
- * - Scripts require an authorized nonce or an explicitly trusted source.
- * - Inline styles are allowed for Tailwind and UI component compatibility.
- * - API connections are restricted to the configured API origin.
- * - Stripe resources are explicitly allowlisted.
+ * Scripts are NOT nonce-based. This app enables `cacheComponents` (Partial
+ * Prerendering), which serves a cached shell whose inline bootstrap scripts and
+ * framework <script src> tags are produced at build time and therefore cannot
+ * carry a per-request nonce. Next.js documents that PPR is incompatible with
+ * nonce-based CSP (`node_modules/next/dist/docs/01-app/02-guides/
+ * content-security-policy.md`); shipping a nonce (or `'strict-dynamic'`) makes
+ * the browser block those scripts, so hydration, client-side navigation, the
+ * login form and add-to-cart all silently stop working.
+ *
+ * The policy therefore restricts scripts to same-origin files, the inline
+ * bootstrap Next.js emits for the prerendered shell, and the Stripe CDN, and
+ * grants the narrow set of Stripe hosts required by Stripe.js, the Payment
+ * Element iframe and its telemetry. Inline styles are required by Tailwind and
+ * by the component library's runtime style injection.
+ *
+ * Host list reference: https://docs.stripe.com/security/guide#content-security-policy
  */
+const STRIPE_SCRIPT_SRC = "https://js.stripe.com";
+const STRIPE_FRAME_SRC = ["https://js.stripe.com", "https://hooks.stripe.com", "https://m.stripe.network"];
+const STRIPE_CONNECT_SRC = [
+  "https://api.stripe.com",
+  "https://errors.stripe.com",
+  "https://m.stripe.network",
+  "https://r.stripe.com",
+];
+
+function list(...values: (string | undefined)[]): string {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))].join(" ");
+}
+
 export function buildContentSecurityPolicy({
-  nonce,
   isDev,
   apiOrigin,
+  secure = !isDev,
 }: CspOptions): string {
-  const apiSources = apiOrigin ? ` ${apiOrigin}` : "";
-
   const directives = [
-    // Default policy
     "default-src 'self'",
 
-    // Scripts: nonce-based execution and explicitly trusted Stripe CDN.
-    // strict-dynamic is intentionally omitted so host allowlisting works.
-    [
-      "script-src",
-      "'self'",
-      `'nonce-${nonce}'`,
-      "https://js.stripe.com",
-      ...(isDev ? ["'unsafe-eval'"] : []),
-    ].join(" "),
+    // `'unsafe-inline'` covers the prerendered shell's bootstrap scripts; it is
+    // scoped to this origin plus `js.stripe.com`, so third-party hosts cannot
+    // inject executable script.
+    list("script-src 'self' 'unsafe-inline'", STRIPE_SCRIPT_SRC, isDev ? "'unsafe-eval'" : undefined),
 
-    // Styles
     "style-src 'self' 'unsafe-inline'",
 
-    // Images, including Laravel-hosted storage assets
-    `img-src 'self' data: blob:${apiSources}`,
+    // Product images served by the API plus Stripe's card-brand assets.
+    list("img-src 'self' data: blob:", apiOrigin ?? undefined, "https://*.stripe.com"),
 
-    // Fonts
     "font-src 'self' data:",
 
-    // API requests and Stripe connections
-    [
-      "connect-src",
-      "'self'",
-      apiSources.trim(),
-      "https://api.stripe.com",
-      "https://m.stripe.network",
-    ]
-      .filter(Boolean)
-      .join(" "),
+    // The browser only calls this origin (the BFF) and Stripe. `m.stripe.network`
+    // backs the Payment Element's frame messaging, `r`/`errors` are telemetry.
+    list("connect-src 'self'", apiOrigin ?? undefined, ...STRIPE_CONNECT_SRC),
 
-    // Stripe payment frames
-    [
-      "frame-src",
-      "https://js.stripe.com",
-      "https://hooks.stripe.com",
-      "https://m.stripe.network",
-    ].join(" "),
+    list("frame-src", ...STRIPE_FRAME_SRC),
 
-    // Restrict embedded objects
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
     "object-src 'none'",
-
-    // Restrict base URL
     "base-uri 'self'",
-
-    // Restrict form submissions
     "form-action 'self'",
-
-    // Prevent this application from being embedded
     "frame-ancestors 'none'",
 
-    // Upgrade insecure requests in production
-    ...(!isDev ? ["upgrade-insecure-requests"] : []),
+    // Only meaningful (and only harmless) when the app itself is served over
+    // HTTPS; emitting it behind plain HTTP would upgrade same-origin asset and
+    // API requests to a port that may not speak TLS.
+    ...(secure ? ["upgrade-insecure-requests"] : []),
   ];
 
   return directives.join("; ");
 }
+

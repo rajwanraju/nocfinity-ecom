@@ -1,4 +1,3 @@
-
 import { NextResponse, type NextRequest } from "next/server";
 import { sessionCookieName, type SessionKind } from "@/lib/auth/cookies";
 import { buildContentSecurityPolicy } from "@/lib/security/csp";
@@ -41,9 +40,11 @@ function guardFor(pathname: string): Guard | null {
 }
 
 function apiOrigin(): string | null {
-  const value =
-    process.env.API_PUBLIC_ORIGIN ??
-    process.env.API_URL;
+  // `.env.example` ships API_PUBLIC_ORIGIN as an empty string ("fall back to
+  // API_URL"), so a blank value must be treated as unset rather than as a
+  // deliberate empty origin. Otherwise product images are blocked by CSP.
+  const configured = process.env.API_PUBLIC_ORIGIN?.trim();
+  const value = configured ? configured : process.env.API_URL;
 
   if (!value) return null;
 
@@ -60,24 +61,43 @@ function apiOrigin(): string | null {
   }
 }
 
-function createNonce(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
+/**
+ * The public scheme matters for HSTS and `upgrade-insecure-requests`: behind a
+ * TLS-terminating proxy the internal hop is HTTP, so `x-forwarded-proto` wins.
+ */
+function isSecureRequest(request: NextRequest): boolean {
+  const forwarded = request.headers.get("x-forwarded-proto");
 
-  return btoa(
-    Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")
+  if (forwarded) {
+    return forwarded.split(",")[0].trim().toLowerCase() === "https";
+  }
+
+  return request.nextUrl.protocol === "https:";
+}
+
+/**
+ * CSP is set here rather than in `next.config.ts` because it depends on the
+ * request (HTTPS or not) and on runtime env (`API_PUBLIC_ORIGIN`). The remaining
+ * static hardening headers live in `next.config.ts` and apply to every route.
+ */
+function applyCsp(response: NextResponse, secure: boolean): NextResponse {
+  response.headers.set(
+    "Content-Security-Policy",
+    buildContentSecurityPolicy({
+      isDev: process.env.NODE_ENV !== "production",
+      apiOrigin: apiOrigin(),
+      secure,
+    }),
   );
+
+  return response;
 }
 
 export function proxy(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
 
-  const nonce = createNonce();
-
-  const csp = buildContentSecurityPolicy({
-    nonce,
-    isDev: process.env.NODE_ENV !== "production",
-    apiOrigin: apiOrigin(),
-  });
+  // Only enable transport hardening when the browser is actually on HTTPS.
+  const secure = isSecureRequest(request) && process.env.NODE_ENV === "production";
 
   const guard = guardFor(pathname);
 
@@ -93,32 +113,12 @@ export function proxy(request: NextRequest): NextResponse {
     url.search = "";
     url.searchParams.set("next", `${pathname}${search}`);
 
-    const response = NextResponse.redirect(url);
-
-    response.headers.set("Content-Security-Policy", csp);
-    response.headers.set("X-Content-Type-Options", "nosniff");
-
-    return response;
+    return applyCsp(NextResponse.redirect(url), secure);
   }
 
-  // Forward the nonce and CSP to Next.js.
-  // Next.js uses the nonce when rendering framework scripts.
-  const requestHeaders = new Headers(request.headers);
-
-  requestHeaders.set("x-nonce", nonce);
-  requestHeaders.set("Content-Security-Policy", csp);
-
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-
-  // Apply CSP to the browser response.
-  response.headers.set("Content-Security-Policy", csp);
-  response.headers.set("X-Content-Type-Options", "nosniff");
-
-  return response;
+  // Next.js does not consume the CSP from the request side (no nonce is issued),
+  // so it is applied to the document response only.
+  return applyCsp(NextResponse.next(), secure);
 }
 
 export const config = {

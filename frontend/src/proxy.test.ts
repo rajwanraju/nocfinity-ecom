@@ -59,13 +59,15 @@ describe("proxy route guards", () => {
     expect(proxy(request("/admin/login")).status).toBe(200);
   });
 
-  it("attaches a nonce-based CSP to every response", () => {
+  it("attaches a script-restricted CSP to every response", () => {
     const response = proxy(request("/"));
     const csp = response.headers.get("content-security-policy");
 
-    expect(csp).toContain("script-src 'self' 'nonce-");
+    // Partial Prerendering cannot carry a per-request nonce, so the policy
+    // must allow the prerendered shell's scripts instead of blocking them.
+    expect(csp).toContain("script-src 'self' 'unsafe-inline' https://js.stripe.com");
+    expect(csp).not.toContain("nonce-");
     expect(csp).toContain("frame-ancestors 'none'");
-    expect(response.headers.get("x-nonce")).toBeNull();
   });
 
   it("uses the public API origin in the CSP when the internal host differs", () => {
@@ -76,6 +78,38 @@ describe("proxy route guards", () => {
 
     expect(csp).toContain("img-src 'self' data: blob: http://localhost:8000");
     expect(csp).not.toContain("http://backend:8000");
+  });
+
+  it("falls back to API_URL when API_PUBLIC_ORIGIN is blank", () => {
+    process.env.API_URL = "http://127.0.0.1:8001/api/v1";
+    process.env.API_PUBLIC_ORIGIN = "";
+
+    const csp = proxy(request("/")).headers.get("content-security-policy");
+
+    expect(csp).toContain("img-src 'self' data: blob: http://127.0.0.1:8001");
+    expect(csp).toContain("connect-src 'self' http://127.0.0.1:8001");
+  });
+
+  it("attaches the CSP to redirects as well as documents", () => {
+    const redirect = proxy(request("/account"));
+
+    expect(redirect.status).toBe(307);
+    expect(redirect.headers.get("content-security-policy")).toContain("default-src 'self'");
+  });
+
+  it("upgrades insecure requests only behind HTTPS in production", () => {
+    expect(proxy(request("/")).headers.get("content-security-policy")).not.toContain(
+      "upgrade-insecure-requests",
+    );
+
+    const forwarded = new NextRequest(new URL("http://shop.test/"), {
+      headers: { "x-forwarded-proto": "https" },
+    });
+
+    // NODE_ENV is "test" under Vitest, so transport hardening stays off.
+    expect(proxy(forwarded).headers.get("content-security-policy")).not.toContain(
+      "upgrade-insecure-requests",
+    );
   });
 
   it("excludes API, static assets and images from the matcher", () => {

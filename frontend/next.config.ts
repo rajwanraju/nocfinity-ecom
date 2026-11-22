@@ -1,5 +1,17 @@
 import type { NextConfig } from "next";
 
+/**
+ * True when `NEXT_PUBLIC_SITE_URL` is configured as plain HTTP, i.e. a local or
+ * non-TLS deployment where HSTS must not be sent.
+ */
+function servesPlainHttp(): boolean {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "").protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -39,19 +51,29 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    // These static headers apply to every route, assets included; the CSP is
+    // per-request and therefore lives in `src/proxy.ts`.
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "X-Frame-Options", value: "DENY" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
         key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=(), payment=(self)",
+        // `payment` is delegated to Stripe.js so wallet / Payment Request flows
+        // (Apple Pay, Google Pay) are allowed to run inside the payment frame.
+        value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")',
       },
-      { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+      {
+        // `same-origin` would sever the wallet popup's `window.opener` link to
+        // Stripe.js; allow-popups keeps the isolation for everything else.
+        key: "Cross-Origin-Opener-Policy",
+        value: "same-origin-allow-popups",
+      },
     ];
 
-    // SEC-8: HSTS only where HTTPS is actually served.
-    if (process.env.NODE_ENV === "production") {
+    // SEC-8: HSTS only where HTTPS is actually served. An explicitly configured
+    // plain-HTTP site URL (local production build) must not pin HSTS.
+    if (process.env.NODE_ENV === "production" && !servesPlainHttp()) {
       securityHeaders.push({
         key: "Strict-Transport-Security",
         value: "max-age=63072000; includeSubDomains; preload",
