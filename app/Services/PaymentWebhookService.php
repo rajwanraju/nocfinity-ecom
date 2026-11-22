@@ -57,6 +57,8 @@ class PaymentWebhookService
             match ($type) {
                 'payment_intent.succeeded' => $this->succeeded($object),
                 'payment_intent.payment_failed' => $this->failed($object),
+                'payment_intent.processing' => $this->processing($object),
+                'payment_intent.canceled' => $this->canceled($object),
                 default => null,
             };
 
@@ -177,6 +179,62 @@ class PaymentWebhookService
             'status' => PaymentStatus::Failed,
             'failure_message' => $object['last_payment_error']['message'] ?? 'Payment failed.',
         ])->save();
+    }
+
+    /**
+     * A PaymentIntent that is still settling (e.g. a delayed payment method)
+     * keeps the order pending but records the synchronous payment status.
+     *
+     * @param  array<string, mixed>  $object
+     */
+    private function processing(array $object): void
+    {
+        $payment = Payment::query()
+            ->where('provider_payment_intent_id', (string) ($object['id'] ?? ''))
+            ->lockForUpdate()
+            ->first();
+
+        if ($payment === null || $this->isSettled($payment)) {
+            return;
+        }
+
+        $payment->forceFill(['status' => PaymentStatus::Processing])->save();
+    }
+
+    /**
+     * Stripe cancelled the intent (expired session, manual cancel or the
+     * scheduled expiry job). The order itself is cancelled by the transition
+     * service, so this only synchronises the payment record.
+     *
+     * @param  array<string, mixed>  $object
+     */
+    private function canceled(array $object): void
+    {
+        $payment = Payment::query()
+            ->where('provider_payment_intent_id', (string) ($object['id'] ?? ''))
+            ->lockForUpdate()
+            ->first();
+
+        if ($payment === null || $this->isSettled($payment)) {
+            return;
+        }
+
+        $payment->forceFill([
+            'status' => PaymentStatus::Canceled,
+            'failure_message' => $payment->failure_message ?? 'Payment was cancelled before completion.',
+        ])->save();
+    }
+
+    /**
+     * A settled payment must never be downgraded by a late or repeated event.
+     */
+    private function isSettled(Payment $payment): bool
+    {
+        return in_array(
+            $payment->status,
+            [PaymentStatus::Succeeded, PaymentStatus::Refunded],
+            true,
+        );
     }
 
     private function couponStillValid(Order $order): bool

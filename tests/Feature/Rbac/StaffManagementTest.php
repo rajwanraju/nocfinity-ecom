@@ -33,7 +33,8 @@ it('filters the staff list by search, role and status', function (): void {
 
     User::factory()->staff()->inactive()->create(['name' => 'Ian Inactive']);
 
-    $search = $this->getJson('/api/v1/admin/staff?search=Mira')->assertOk();
+    // Search the full name: faker can generate "Mira" as the Super Admin's name.
+    $search = $this->getJson('/api/v1/admin/staff?search=Mira Manager')->assertOk();
     expect($search->json('meta.pagination.total'))->toBe(1);
 
     $byRole = $this->getJson('/api/v1/admin/staff?role=Product Manager')->assertOk();

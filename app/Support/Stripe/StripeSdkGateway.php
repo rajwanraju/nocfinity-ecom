@@ -2,7 +2,9 @@
 
 namespace App\Support\Stripe;
 
+use App\Exceptions\PaymentGatewayUnavailableException;
 use App\Exceptions\StripeWebhookSignatureException;
+use Stripe\Exception\ApiErrorException;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\StripeClient;
 use Stripe\Webhook;
@@ -21,12 +23,22 @@ class StripeSdkGateway implements StripeGateway
         array $metadata,
         string $idempotencyKey,
     ): array {
-        $intent = $this->client()->paymentIntents->create([
-            'amount' => $amount,
-            'currency' => $currency,
-            'payment_method_types' => ['card'],
-            'metadata' => $metadata,
-        ], ['idempotency_key' => $idempotencyKey]);
+        try {
+            // `payment_method_types` was removed from the Stripe API: the
+            // dashboard now controls which methods are enabled. Sending it
+            // makes every PaymentIntent fail with an invalid-request error.
+            $intent = $this->client()->paymentIntents->create([
+                'amount' => $amount,
+                'currency' => $currency,
+                'metadata' => $metadata,
+            ], ['idempotency_key' => $idempotencyKey]);
+        } catch (ApiErrorException $e) {
+            // Keep the provider detail in the log and give the client a stable
+            // 503 instead of a raw 500 with the Stripe message.
+            report($e);
+
+            throw new PaymentGatewayUnavailableException;
+        }
 
         return [
             'id' => $intent->id,
@@ -52,12 +64,16 @@ class StripeSdkGateway implements StripeGateway
 
     public function verifyWebhook(string $payload, string $signature): void
     {
+        $secret = trim((string) config('services.stripe.webhook_secret'));
+
+        // An empty signing secret would let anyone forge a valid HMAC, so an
+        // unconfigured endpoint must reject every webhook.
+        if ($secret === '' || $signature === '') {
+            throw new StripeWebhookSignatureException;
+        }
+
         try {
-            Webhook::constructEvent(
-                $payload,
-                $signature,
-                (string) config('services.stripe.webhook_secret'),
-            );
+            Webhook::constructEvent($payload, $signature, $secret);
         } catch (SignatureVerificationException) {
             throw new StripeWebhookSignatureException;
         }
@@ -65,6 +81,14 @@ class StripeSdkGateway implements StripeGateway
 
     private function client(): StripeClient
     {
-        return $this->client ??= new StripeClient((string) config('services.stripe.secret'));
+        $secret = trim((string) config('services.stripe.secret'));
+
+        // The SDK throws "api_key cannot be the empty string"; surface a domain
+        // error instead so callers can respond with a controlled 503.
+        if ($secret === '') {
+            throw new PaymentGatewayUnavailableException;
+        }
+
+        return $this->client ??= new StripeClient($secret);
     }
 }

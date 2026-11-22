@@ -56,6 +56,11 @@ final class ApiExceptionHandler
                     [],
                     400,
                 ),
+                $e instanceof PaymentGatewayUnavailableException => ApiResponse::error(
+                    $e->getMessage(),
+                    [],
+                    503,
+                ),
                 $e instanceof InvalidOrderTransitionException => ApiResponse::error(
                     $e->getMessage(),
                     [],

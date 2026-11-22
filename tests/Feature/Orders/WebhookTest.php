@@ -142,6 +142,54 @@ it('refunds and cancels when the coupon expired before payment', function (): vo
         ->and($product->fresh()->stock)->toBe(5);
 });
 
+it('synchronises a cancelled payment intent without cancelling the order', function (): void {
+    $customer = User::factory()->create();
+    $product = Product::factory()->create(['price' => 5000, 'stock' => 10]);
+
+    [$order] = placeOrderWithFakeStripe($customer, $product, 1);
+
+    sendStripeWebhook(stripeEventPayload('payment_intent.canceled', paymentIntentPayload($order, [
+        'status' => 'canceled',
+    ])))->assertOk();
+
+    expect($order->fresh()->latestPayment?->status)->toBe(PaymentStatus::Canceled)
+        ->and($order->fresh()->status)->toBe(OrderStatus::Pending)
+        ->and($product->fresh()->stock)->toBe(10);
+});
+
+it('never downgrades a paid payment with a late cancellation event', function (): void {
+    $customer = User::factory()->create();
+    $product = Product::factory()->create(['price' => 5000, 'stock' => 10]);
+
+    [$order] = placeOrderWithFakeStripe($customer, $product, 1);
+
+    sendStripeWebhook(stripeEventPayload('payment_intent.succeeded', paymentIntentPayload($order)))
+        ->assertOk();
+
+    sendStripeWebhook(stripeEventPayload(
+        'payment_intent.canceled',
+        paymentIntentPayload($order, ['status' => 'canceled']),
+        'evt_test_late_cancel',
+    ))->assertOk();
+
+    expect($order->fresh()->latestPayment?->status)->toBe(PaymentStatus::Succeeded)
+        ->and($order->fresh()->status)->toBe(OrderStatus::Paid);
+});
+
+it('records a processing payment intent while the order stays pending', function (): void {
+    $customer = User::factory()->create();
+    $product = Product::factory()->create(['price' => 5000, 'stock' => 10]);
+
+    [$order] = placeOrderWithFakeStripe($customer, $product, 1);
+
+    sendStripeWebhook(stripeEventPayload('payment_intent.processing', paymentIntentPayload($order, [
+        'status' => 'processing',
+    ])))->assertOk();
+
+    expect($order->fresh()->latestPayment?->status)->toBe(PaymentStatus::Processing)
+        ->and($order->fresh()->status)->toBe(OrderStatus::Pending);
+});
+
 it('stores unknown event types without side effects', function (): void {
     $event = stripeEventPayload('customer.created', ['id' => 'cus_123'], 'evt_unknown');
 

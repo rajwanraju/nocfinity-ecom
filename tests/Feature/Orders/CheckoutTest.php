@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PaymentStatus;
+use App\Exceptions\PaymentGatewayUnavailableException;
 use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\Order;
@@ -148,6 +149,61 @@ it('accepts a coupon code supplied at checkout', function (): void {
         ->assertJsonPath('data.order.discount_total', 500)
         ->assertJsonPath('data.order.grand_total', 9499)
         ->assertJsonPath('data.order.coupon_code', 'TAKE500');
+});
+
+it('returns a controlled error when Stripe is not configured', function (): void {
+    $customer = User::factory()->create();
+    $product = Product::factory()->create(['price' => 5000, 'stock' => 5]);
+
+    Sanctum::actingAs($customer, ['customer']);
+    $this->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])->assertOk();
+
+    config(['services.stripe.secret' => '']);
+
+    $this->postJson('/api/v1/checkout', checkoutAddress())
+        ->assertStatus(503)
+        ->assertJsonPath('success', false);
+
+    // Nothing is persisted and the cart survives the failed attempt.
+    expect(Order::query()->count())->toBe(0)
+        ->and(Payment::query()->count())->toBe(0)
+        ->and(Cart::query()->firstOrFail()->items()->count())->toBe(1);
+});
+
+it('can retry the same checkout after the gateway fails', function (): void {
+    $customer = User::factory()->create();
+    $product = Product::factory()->create(['price' => 5000, 'stock' => 5]);
+
+    Sanctum::actingAs($customer, ['customer']);
+    $this->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 1])->assertOk();
+
+    $attempts = 0;
+
+    $this->mock(StripeGateway::class, function ($mock) use (&$attempts): void {
+        $mock->shouldReceive('createPaymentIntent')->andReturnUsing(function () use (&$attempts): array {
+            $attempts++;
+
+            if ($attempts === 1) {
+                throw new PaymentGatewayUnavailableException;
+            }
+
+            return ['id' => 'pi_retry', 'client_secret' => 'pi_retry_secret', 'status' => 'requires_payment_method'];
+        });
+    });
+
+    // A failed attempt must roll back completely so the same idempotency key can
+    // be retried against the gateway (no stale order, cart still intact).
+    $this->postJson('/api/v1/checkout', checkoutAddress(), ['Idempotency-Key' => 'retry-key'])
+        ->assertStatus(503);
+
+    expect(Order::query()->count())->toBe(0)
+        ->and(Cart::query()->firstOrFail()->items()->count())->toBe(1);
+
+    $this->postJson('/api/v1/checkout', checkoutAddress(), ['Idempotency-Key' => 'retry-key'])
+        ->assertCreated()
+        ->assertJsonPath('data.payment.client_secret', 'pi_retry_secret');
+
+    expect(Order::query()->count())->toBe(1);
 });
 
 it('requires an authenticated customer for checkout', function (): void {

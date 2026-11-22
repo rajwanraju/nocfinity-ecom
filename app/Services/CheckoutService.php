@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\CouponException;
+use App\Exceptions\PaymentGatewayUnavailableException;
 use App\Models\Cart;
 use App\Models\Coupon;
 use App\Models\Order;
@@ -110,6 +111,12 @@ class CheckoutService
 
             $discount = $quote['totals']['discount'];
 
+            // Without a secret key the PaymentIntent call fails after the order
+            // row is written; fail before persisting anything with a clear 503.
+            if (trim((string) config('services.stripe.secret')) === '') {
+                throw new PaymentGatewayUnavailableException;
+            }
+
             $order = Order::query()->create([
                 'order_number' => $this->numbers->next(),
                 'checkout_idempotency_key' => $key,
@@ -157,6 +164,13 @@ class CheckoutService
                 'note' => 'Order placed.',
             ]);
 
+            // The Stripe idempotency key must be unique per attempt. An order
+            // id (and order number) can be reallocated after this transaction
+            // rolls back, so a key derived from it is reused with different
+            // metadata; Stripe then rejects the retry with IdempotencyException
+            // and checkout can never complete. The 1:1 checkout idempotency
+            // key already prevents duplicate orders, so the gateway key only
+            // needs to make the SDK's own retries safe.
             $intent = $this->stripe->createPaymentIntent(
                 $order->grand_total,
                 (string) config('services.stripe.currency', 'usd'),
@@ -165,7 +179,7 @@ class CheckoutService
                     'order_number' => $order->order_number,
                     'user_id' => (string) $user->id,
                 ],
-                'order-'.$order->id.'-payment',
+                'order-'.$order->id.'-payment-'.Str::uuid()->toString(),
             );
 
             Payment::query()->create([
